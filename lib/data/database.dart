@@ -3,6 +3,10 @@ import 'package:drift_flutter/drift_flutter.dart';
 
 import '../models/enums.dart';
 
+// Re-export Drift's Value wrapper so files working with this database's
+// Companions (providers, tests) get it from here, not a bare drift import.
+export 'package:drift/drift.dart' show Value;
+
 part 'database.g.dart';
 
 // ---------------------------------------------------------------------------
@@ -60,6 +64,15 @@ class ReferralEvents extends Table {
       dateTime().withDefault(currentDateAndTime)();
 }
 
+/// A screening joined with its patient — the shape the home dashboard needs
+/// (A19). Read-only view model; not a table.
+class PatientScreening {
+  PatientScreening({required this.patient, required this.screening});
+
+  final Patient patient;
+  final Screening screening;
+}
+
 // ---------------------------------------------------------------------------
 // Database (A06, A10) + queries / DAO (A09) + referral transaction (A17)
 // ---------------------------------------------------------------------------
@@ -83,8 +96,10 @@ class AppDatabase extends _$AppDatabase {
           // holds real data without a tested migration path.
         },
         beforeOpen: (details) async {
-          // FKs are off by default in SQLite; the cascade deletes above rely
-          // on them being on.
+          // Best-effort referential integrity (e.g. rejecting a screening that
+          // points at a missing patient). Deletion does NOT depend on this —
+          // see deletePatient — because the pragma is per-connection and not
+          // reliably applied everywhere (notably the in-memory test executor).
           await customStatement('PRAGMA foreign_keys = ON');
         },
       );
@@ -109,8 +124,29 @@ class AppDatabase extends _$AppDatabase {
   Future<bool> updatePatient(Patient patient) =>
       update(patients).replace(patient);
 
-  Future<int> deletePatient(int id) =>
-      (delete(patients)..where((p) => p.id.equals(id))).go();
+  /// Delete a patient together with all of their screenings and referral
+  /// events. Returns the number of patient rows removed.
+  ///
+  /// Done explicitly in a transaction rather than trusting SQLite's FK cascade:
+  /// `PRAGMA foreign_keys` enforcement is per-connection and easy to have off
+  /// (it isn't reliably applied in the in-memory test setup), so children are
+  /// removed deterministically. This is also the consent-revocation / DPDP
+  /// "delete my data" path, where leaving orphaned rows behind is unacceptable.
+  Future<int> deletePatient(int id) {
+    return transaction(() async {
+      final screeningIds = await (select(screenings)
+            ..where((s) => s.patientId.equals(id)))
+          .map((s) => s.id)
+          .get();
+      if (screeningIds.isNotEmpty) {
+        await (delete(referralEvents)
+              ..where((e) => e.screeningId.isIn(screeningIds)))
+            .go();
+        await (delete(screenings)..where((s) => s.patientId.equals(id))).go();
+      }
+      return (delete(patients)..where((p) => p.id.equals(id))).go();
+    });
+  }
 
   // --- Screenings (A09) ---
 
@@ -168,6 +204,50 @@ class AppDatabase extends _$AppDatabase {
         ]),
       );
     return query.map((row) => row.read(count) ?? 0).watchSingle();
+  }
+
+  // --- Home dashboard (A19) ---
+
+  /// Screenings still pending follow-up (referred or booked), each joined with
+  /// its patient, soonest reminder first. Feeds the health-worker home.
+  Stream<List<PatientScreening>> watchDueFollowUps() {
+    final query = select(screenings).join([
+      innerJoin(patients, patients.id.equalsExp(screenings.patientId)),
+    ]);
+    query
+      ..where(
+        screenings.referralStatus.isInValues([
+          ReferralStatus.referred,
+          ReferralStatus.booked,
+        ]),
+      )
+      ..orderBy([OrderingTerm.asc(screenings.nextReminderAt)]);
+    return query
+        .map(
+          (row) => PatientScreening(
+            patient: row.readTable(patients),
+            screening: row.readTable(screenings),
+          ),
+        )
+        .watch();
+  }
+
+  /// The most recently recorded screenings across all patients.
+  Stream<List<PatientScreening>> watchRecentScreenings({int limit = 10}) {
+    final query = select(screenings).join([
+      innerJoin(patients, patients.id.equalsExp(screenings.patientId)),
+    ]);
+    query
+      ..orderBy([OrderingTerm.desc(screenings.screeningDate)])
+      ..limit(limit);
+    return query
+        .map(
+          (row) => PatientScreening(
+            patient: row.readTable(patients),
+            screening: row.readTable(screenings),
+          ),
+        )
+        .watch();
   }
 
   // --- Referral events (A17) ---
