@@ -12,11 +12,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/database.dart';
 import '../models/enums.dart';
+import '../services/launcher_service.dart';
+import '../services/notification_service.dart';
+import '../services/reminder_service.dart';
 
 // Re-export the row types and domain enums so screens get them from this one
 // import and never reach into `data/`.
 export '../data/database.dart' show Patient, Screening, ReferralEvent;
 export '../models/enums.dart';
+export '../services/launcher_service.dart' show LauncherService;
+export '../services/notification_service.dart' show NotificationService;
+export '../services/reminder_service.dart' show ReminderService;
 
 /// The single database instance for the app's lifetime.
 final databaseProvider = Provider<AppDatabase>((ref) {
@@ -96,7 +102,26 @@ class PatientRepository {
     );
   }
 
-  Future<bool> updatePatient(Patient patient) => _db.updatePatient(patient);
+  /// Update an existing patient's editable fields. Takes the current row and
+  /// plain values so screens never deal with Drift's `Value` wrapper.
+  Future<void> editPatient({
+    required Patient existing,
+    required String name,
+    required String phone,
+    int? age,
+    String? sex,
+    String preferredLanguage = 'en',
+  }) async {
+    await _db.updatePatient(
+      existing.copyWith(
+        name: name,
+        phone: phone,
+        age: Value(age),
+        sex: Value(sex),
+        preferredLanguage: preferredLanguage,
+      ),
+    );
+  }
 
   Future<int> deletePatient(int id) => _db.deletePatient(id);
 
@@ -135,3 +160,26 @@ class PatientRepository {
     return _db.advanceReferral(screeningId: screeningId, to: to, note: note);
   }
 }
+
+// ---------------------------------------------------------------------------
+// Services (A15 / A16 / A18).
+// ---------------------------------------------------------------------------
+
+/// Local notifications. Initialised once in `main` before the first frame.
+final notificationServiceProvider = Provider<NotificationService>((ref) {
+  final service = NotificationService();
+  ref.onDispose(service.dispose);
+  return service;
+});
+
+/// Turns screenings' `nextReminderAt` into scheduled follow-up reminders.
+final reminderServiceProvider = Provider<ReminderService>((ref) {
+  return ReminderService(
+    ref.watch(databaseProvider),
+    ref.watch(notificationServiceProvider),
+  );
+});
+
+/// Launches maps / dialer for referral sites and patient phones.
+final launcherServiceProvider =
+    Provider<LauncherService>((ref) => const LauncherService());

@@ -3,13 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/app_providers.dart';
 import '../theme/app_theme.dart';
+import 'patient_detail_screen.dart';
+import 'patient_form_screen.dart';
 
-/// The reference screen (A12).
-///
-/// It proves the data layer end-to-end: it lists patients from the DB via
-/// [patientListProvider], and adding one persists through
-/// [patientRepositoryProvider] so it survives an app restart. Person B builds
-/// the richer screens against this same contract (B16).
+/// The reference screen (A12). Lists patients from the DB via
+/// [patientListProvider]; tapping opens the detail screen, and the FAB opens
+/// the add-patient form (A13).
 class PatientListScreen extends ConsumerWidget {
   const PatientListScreen({super.key});
 
@@ -51,7 +50,9 @@ class PatientListScreen extends ConsumerWidget {
         },
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showAddPatientSheet(context, ref),
+        onPressed: () => Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => const PatientFormScreen()),
+        ),
         icon: const Icon(Icons.person_add_alt_1),
         label: const Text('Add patient'),
       ),
@@ -86,7 +87,12 @@ class _PatientTile extends StatelessWidget {
           style: const TextStyle(fontWeight: FontWeight.w600),
         ),
         subtitle: subtitle.isEmpty ? null : Text(subtitle),
-        // Patient detail / screening entry is Person B's B16/B17.
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => PatientDetailScreen(patientId: patient.id),
+          ),
+        ),
       ),
     );
   }
@@ -121,79 +127,4 @@ class _EmptyState extends StatelessWidget {
       ),
     );
   }
-}
-
-/// Minimal add-patient form — enough to prove persistence for A12. The full
-/// validated form (required name, valid phone) is A13 / B16.
-Future<void> _showAddPatientSheet(BuildContext context, WidgetRef ref) {
-  final nameCtrl = TextEditingController();
-  final phoneCtrl = TextEditingController();
-  final ageCtrl = TextEditingController();
-  final formKey = GlobalKey<FormState>();
-
-  return showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    builder: (sheetContext) {
-      return Padding(
-        padding: EdgeInsets.only(
-          left: AppSpacing.md,
-          right: AppSpacing.md,
-          top: AppSpacing.lg,
-          bottom: MediaQuery.of(sheetContext).viewInsets.bottom + AppSpacing.lg,
-        ),
-        child: Form(
-          key: formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text('Add patient',
-                  style: Theme.of(sheetContext).textTheme.titleLarge),
-              const SizedBox(height: AppSpacing.md),
-              TextFormField(
-                controller: nameCtrl,
-                textCapitalization: TextCapitalization.words,
-                decoration: const InputDecoration(labelText: 'Name'),
-                validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? 'Name is required' : null,
-              ),
-              const SizedBox(height: AppSpacing.md),
-              TextFormField(
-                controller: phoneCtrl,
-                keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(labelText: 'Phone'),
-                validator: (v) {
-                  final t = (v ?? '').trim();
-                  if (t.isEmpty) return 'Phone is required';
-                  if (t.length < 7) return 'Enter a valid phone number';
-                  return null;
-                },
-              ),
-              const SizedBox(height: AppSpacing.md),
-              TextFormField(
-                controller: ageCtrl,
-                keyboardType: TextInputType.number,
-                decoration:
-                    const InputDecoration(labelText: 'Age (optional)'),
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              FilledButton(
-                onPressed: () async {
-                  if (!formKey.currentState!.validate()) return;
-                  await ref.read(patientRepositoryProvider).addPatient(
-                        name: nameCtrl.text.trim(),
-                        phone: phoneCtrl.text.trim(),
-                        age: int.tryParse(ageCtrl.text.trim()),
-                      );
-                  if (sheetContext.mounted) Navigator.of(sheetContext).pop();
-                },
-                child: const Text('Save'),
-              ),
-            ],
-          ),
-        ),
-      );
-    },
-  );
 }

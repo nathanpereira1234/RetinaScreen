@@ -23,6 +23,14 @@ dependencies:
   drift_flutter: ^0.2.0
   sqlite3_flutter_libs: ^0.5.24
 
+  # Local follow-up reminders (A15/A16). Timezone-aware scheduling.
+  flutter_local_notifications: ^17.2.3
+  timezone: ^0.9.4
+  flutter_timezone: ^3.0.1
+
+  # Launch maps + dialer for referral sites / patient phone (A18).
+  url_launcher: ^6.3.0
+
   # Formatting (dates in the UI). No network, no PII leaves the device.
   intl: ^0.19.0
 
