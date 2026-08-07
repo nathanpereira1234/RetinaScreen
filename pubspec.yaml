@@ -1,0 +1,40 @@
+name: retinascreen
+description: >-
+  RetinaScreen Phase 1 — companion and last-mile app for diabetic-retinopathy
+  screening programs. Referral tracking, reminders, and plain-language result
+  explanation. This app does NOT diagnose (keeps Phase 1 outside SaMD).
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: '>=3.4.0 <4.0.0'
+  flutter: '>=3.22.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State management — the provider layer is the contract between the data
+  # layer (Person A) and the screens (Person B). See providers/app_providers.dart.
+  flutter_riverpod: ^2.5.1
+
+  # Offline-first source of truth. Drift = typed SQLite with reactive streams.
+  drift: ^2.20.0
+  drift_flutter: ^0.2.0
+  sqlite3_flutter_libs: ^0.5.24
+
+  # Formatting (dates in the UI). No network, no PII leaves the device.
+  intl: ^0.19.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  # Codegen for Drift tables -> lib/data/database.g.dart
+  drift_dev: ^2.20.0
+  build_runner: ^2.4.11
+
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true

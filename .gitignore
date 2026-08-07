@@ -1,0 +1,41 @@
+# RetinaScreen — hand-written source only. Platform folders and generated
+# code are produced locally during bootstrap (see README) and are NOT tracked.
+
+# --- Flutter / Dart ---
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+pubspec.lock
+.pub-cache/
+.pub/
+coverage/
+
+# --- Generated code (build_runner) ---
+# Regenerate with: dart run build_runner build --delete-conflicting-outputs
+*.g.dart
+*.freezed.dart
+
+# --- Platform scaffolding (regenerated via `flutter create`, see README) ---
+/android/
+/ios/
+/linux/
+/macos/
+/windows/
+/web/
+.metadata
+
+# --- Signing / secrets: a leaked upload key is unrecoverable. Never commit. ---
+*.jks
+*.keystore
+key.properties
+**/android/key.properties
+*.env
+.env
+
+# --- IDE / OS ---
+.idea/
+.vscode/
+*.iml
+.DS_Store
