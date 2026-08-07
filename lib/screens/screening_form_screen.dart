@@ -113,7 +113,7 @@ class _ScreeningFormScreenState extends ConsumerState<ScreeningFormScreen> {
           padding: const EdgeInsets.all(AppSpacing.md),
           children: [
             DropdownButtonFormField<ScreeningResult>(
-              value: _result,
+              initialValue: _result,
               isExpanded: true,
               decoration: const InputDecoration(
                 labelText: 'Result (entered by a human)',
@@ -132,7 +132,10 @@ class _ScreeningFormScreenState extends ConsumerState<ScreeningFormScreen> {
             ),
             const SizedBox(height: AppSpacing.md),
             DropdownButtonFormField<ReferralStatus>(
-              value: _referralStatus,
+              // Keyed so the programmatic default set when the result changes
+              // is reflected (initialValue is otherwise read only once).
+              key: ValueKey(_referralStatus),
+              initialValue: _referralStatus,
               decoration:
                   const InputDecoration(labelText: 'Referral status'),
               items: [

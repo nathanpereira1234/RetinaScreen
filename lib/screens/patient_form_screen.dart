@@ -129,7 +129,7 @@ class _PatientFormScreenState extends ConsumerState<PatientFormScreen> {
             ),
             const SizedBox(height: AppSpacing.md),
             DropdownButtonFormField<String?>(
-              value: _sex,
+              initialValue: _sex,
               decoration: const InputDecoration(labelText: 'Sex (optional)'),
               items: [
                 const DropdownMenuItem<String?>(
@@ -142,7 +142,7 @@ class _PatientFormScreenState extends ConsumerState<PatientFormScreen> {
             ),
             const SizedBox(height: AppSpacing.md),
             DropdownButtonFormField<String>(
-              value: _language,
+              initialValue: _language,
               decoration:
                   const InputDecoration(labelText: 'Preferred language'),
               items: [

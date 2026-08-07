@@ -102,6 +102,8 @@ class NotificationService {
       target,
       _details(),
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
       payload: '$patientId',
     );
   }
