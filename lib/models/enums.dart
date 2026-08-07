@@ -3,6 +3,7 @@
 /// This file has no Flutter or Drift dependency on purpose: the state machine
 /// is pure logic and is unit-tested in isolation
 /// (`test/referral_state_machine_test.dart`).
+library;
 
 /// The clinical finding a *human* entered for a screening.
 ///

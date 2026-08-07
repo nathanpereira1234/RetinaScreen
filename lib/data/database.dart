@@ -3,6 +3,10 @@ import 'package:drift_flutter/drift_flutter.dart';
 
 import '../models/enums.dart';
 
+// Re-export Drift's Value wrapper so files working with this database's
+// Companions (providers, tests) get it from here, not a bare drift import.
+export 'package:drift/drift.dart' show Value;
+
 part 'database.g.dart';
 
 // ---------------------------------------------------------------------------
