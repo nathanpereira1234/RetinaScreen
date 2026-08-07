@@ -12,14 +12,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/database.dart';
 import '../models/enums.dart';
+import '../services/crash_reporter.dart';
 import '../services/launcher_service.dart';
 import '../services/notification_service.dart';
 import '../services/reminder_service.dart';
 
 // Re-export the row types and domain enums so screens get them from this one
 // import and never reach into `data/`.
-export '../data/database.dart' show Patient, Screening, ReferralEvent;
+export '../data/database.dart'
+    show Patient, Screening, ReferralEvent, PatientScreening;
 export '../models/enums.dart';
+export '../services/crash_reporter.dart' show CrashReporter;
 export '../services/launcher_service.dart' show LauncherService;
 export '../services/notification_service.dart' show NotificationService;
 export '../services/reminder_service.dart' show ReminderService;
@@ -60,6 +63,17 @@ final pendingReferralsProvider = StreamProvider<List<Screening>>((ref) {
 /// Count for the home badge.
 final pendingReferralCountProvider = StreamProvider<int>((ref) {
   return ref.watch(databaseProvider).watchPendingReferralCount();
+});
+
+/// Home dashboard (A19): pending follow-ups joined with their patient.
+final dueFollowUpsProvider = StreamProvider<List<PatientScreening>>((ref) {
+  return ref.watch(databaseProvider).watchDueFollowUps();
+});
+
+/// Home dashboard (A19): most recently recorded screenings.
+final recentScreeningsProvider =
+    StreamProvider<List<PatientScreening>>((ref) {
+  return ref.watch(databaseProvider).watchRecentScreenings();
 });
 
 /// Append-only audit trail for the timeline UI.
@@ -162,7 +176,7 @@ class PatientRepository {
 }
 
 // ---------------------------------------------------------------------------
-// Services (A15 / A16 / A18).
+// Services (A15 / A16 / A18 / A23).
 // ---------------------------------------------------------------------------
 
 /// Local notifications. Initialised once in `main` before the first frame.
@@ -183,3 +197,8 @@ final reminderServiceProvider = Provider<ReminderService>((ref) {
 /// Launches maps / dialer for referral sites and patient phones.
 final launcherServiceProvider =
     Provider<LauncherService>((ref) => const LauncherService());
+
+/// Crash / error reporting (A23). Swap the implementation for a dashboard
+/// backend without touching call sites — see docs/RELEASE.md.
+final crashReporterProvider =
+    Provider<CrashReporter>((ref) => const LoggingCrashReporter());

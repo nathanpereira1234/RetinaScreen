@@ -4,27 +4,40 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'providers/app_providers.dart';
+import 'screens/home_screen.dart';
 import 'screens/patient_detail_screen.dart';
-import 'screens/patient_list_screen.dart';
 import 'theme/app_theme.dart';
 
 /// Used to navigate from a tapped reminder without a BuildContext.
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-
-  // Share one ProviderContainer between the pre-frame setup and the widget
-  // tree so the services initialised here are the same instances the UI uses.
+  // One container shared between the pre-frame setup and the widget tree.
   final container = ProviderContainer();
-  await container.read(notificationServiceProvider).init();
-  await container.read(reminderServiceProvider).syncAll();
+  final crash = container.read(crashReporterProvider);
 
-  runApp(
-    UncontrolledProviderScope(
-      container: container,
-      child: const RetinaScreenApp(),
-    ),
+  // Route framework + async errors through the crash reporter (A23). No PII is
+  // ever attached — see CrashReporter.
+  runZonedGuarded(
+    () async {
+      WidgetsFlutterBinding.ensureInitialized();
+      FlutterError.onError = crash.recordFlutterError;
+      WidgetsBinding.instance.platformDispatcher.onError = (error, stack) {
+        unawaited(crash.recordError(error, stack, fatal: true));
+        return true;
+      };
+
+      await container.read(notificationServiceProvider).init();
+      await container.read(reminderServiceProvider).syncAll();
+
+      runApp(
+        UncontrolledProviderScope(
+          container: container,
+          child: const RetinaScreenApp(),
+        ),
+      );
+    },
+    (error, stack) => unawaited(crash.recordError(error, stack, fatal: true)),
   );
 }
 
@@ -69,7 +82,7 @@ class _RetinaScreenAppState extends ConsumerState<RetinaScreenApp> {
       debugShowCheckedModeBanner: false,
       navigatorKey: navigatorKey,
       theme: AppTheme.light,
-      home: const PatientListScreen(),
+      home: const HomeScreen(),
     );
   }
 }

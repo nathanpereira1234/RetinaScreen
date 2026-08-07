@@ -64,6 +64,15 @@ class ReferralEvents extends Table {
       dateTime().withDefault(currentDateAndTime)();
 }
 
+/// A screening joined with its patient — the shape the home dashboard needs
+/// (A19). Read-only view model; not a table.
+class PatientScreening {
+  PatientScreening({required this.patient, required this.screening});
+
+  final Patient patient;
+  final Screening screening;
+}
+
 // ---------------------------------------------------------------------------
 // Database (A06, A10) + queries / DAO (A09) + referral transaction (A17)
 // ---------------------------------------------------------------------------
@@ -195,6 +204,50 @@ class AppDatabase extends _$AppDatabase {
         ]),
       );
     return query.map((row) => row.read(count) ?? 0).watchSingle();
+  }
+
+  // --- Home dashboard (A19) ---
+
+  /// Screenings still pending follow-up (referred or booked), each joined with
+  /// its patient, soonest reminder first. Feeds the health-worker home.
+  Stream<List<PatientScreening>> watchDueFollowUps() {
+    final query = select(screenings).join([
+      innerJoin(patients, patients.id.equalsExp(screenings.patientId)),
+    ]);
+    query
+      ..where(
+        screenings.referralStatus.isInValues([
+          ReferralStatus.referred,
+          ReferralStatus.booked,
+        ]),
+      )
+      ..orderBy([OrderingTerm.asc(screenings.nextReminderAt)]);
+    return query
+        .map(
+          (row) => PatientScreening(
+            patient: row.readTable(patients),
+            screening: row.readTable(screenings),
+          ),
+        )
+        .watch();
+  }
+
+  /// The most recently recorded screenings across all patients.
+  Stream<List<PatientScreening>> watchRecentScreenings({int limit = 10}) {
+    final query = select(screenings).join([
+      innerJoin(patients, patients.id.equalsExp(screenings.patientId)),
+    ]);
+    query
+      ..orderBy([OrderingTerm.desc(screenings.screeningDate)])
+      ..limit(limit);
+    return query
+        .map(
+          (row) => PatientScreening(
+            patient: row.readTable(patients),
+            screening: row.readTable(screenings),
+          ),
+        )
+        .watch();
   }
 
   // --- Referral events (A17) ---
