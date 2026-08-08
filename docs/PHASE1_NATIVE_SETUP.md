@@ -30,6 +30,30 @@ scheduled reminders survive a reboot):
 </receiver>
 ```
 
+### Core library desugaring (required)
+
+`flutter_local_notifications` needs Java 8+ API desugaring. In
+`android/app/build.gradle.kts`, enable it in `compileOptions` and add the
+desugar dependency:
+
+```kotlin
+android {
+    compileOptions {
+        isCoreLibraryDesugaringEnabled = true
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
+    }
+}
+
+dependencies {
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+}
+```
+
+(Groovy `build.gradle`: `coreLibraryDesugaringEnabled true` and
+`coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4'`.) Without it
+the build fails with `checkDebugAarMetadata … requires core library desugaring`.
+
 ### Why no exact-alarm permission
 
 `NotificationService.schedule` uses `AndroidScheduleMode.inexactAllowWhileIdle`,
