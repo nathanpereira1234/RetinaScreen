@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest_all.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 
@@ -35,12 +34,10 @@ class NotificationService {
     if (_initialized) return;
 
     tzdata.initializeTimeZones();
-    try {
-      final localName = await FlutterTimezone.getLocalTimezone();
-      tz.setLocalLocation(tz.getLocation(localName));
-    } catch (_) {
-      // Platform channel unavailable (e.g. under `flutter test`); keep UTC.
-    }
+    // `tz.local` stays UTC. We schedule with absolute instants
+    // (TZDateTime.from preserves the moment), so reminders still fire at the
+    // intended local wall-clock time without resolving the device's zone name.
+    // India, the launch market, has no daylight saving to complicate this.
 
     const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
     const settings = InitializationSettings(android: androidInit);
