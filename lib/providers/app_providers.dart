@@ -16,6 +16,7 @@ import '../services/crash_reporter.dart';
 import '../services/launcher_service.dart';
 import '../services/notification_service.dart';
 import '../services/reminder_service.dart';
+import '../services/retinopathy_grader.dart';
 
 // Re-export the row types and domain enums so screens get them from this one
 // import and never reach into `data/`.
@@ -26,6 +27,8 @@ export '../services/crash_reporter.dart' show CrashReporter;
 export '../services/launcher_service.dart' show LauncherService;
 export '../services/notification_service.dart' show NotificationService;
 export '../services/reminder_service.dart' show ReminderService;
+export '../services/retinopathy_grader.dart'
+    show RetinopathyGrader, RetinopathyPrediction, DrGrade;
 
 /// The single database instance for the app's lifetime.
 final databaseProvider = Provider<AppDatabase>((ref) {
@@ -202,3 +205,11 @@ final launcherServiceProvider =
 /// backend without touching call sites — see docs/RELEASE.md.
 final crashReporterProvider =
     Provider<CrashReporter>((ref) => const LoggingCrashReporter());
+
+/// On-device diabetic-retinopathy grader (decision support). Suggests a grade
+/// for a human to confirm — see [RetinopathyGrader]; it never auto-saves.
+final retinopathyGraderProvider = Provider<RetinopathyGrader>((ref) {
+  final grader = RetinopathyGrader();
+  ref.onDispose(grader.dispose);
+  return grader;
+});
