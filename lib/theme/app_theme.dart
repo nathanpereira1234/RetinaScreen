@@ -58,8 +58,12 @@ class AppTheme {
 
     return base.copyWith(
       // Large, legible defaults. Respects the user's OS text-scale on top.
-      textTheme: base.textTheme.apply(
-        fontSizeFactor: 1.05,
+      //
+      // Scale sizes null-safely, THEN apply colours. `TextTheme.apply` with a
+      // `fontSizeFactor != 1.0` asserts on any style whose `fontSize` is null
+      // (some Material styles are), so we can't lean on it for the bump.
+      // Applying only colours (factor stays 1.0) is safe on null sizes.
+      textTheme: _scaleTextTheme(base.textTheme, 1.05).apply(
         bodyColor: AppColors.onSurface,
         displayColor: AppColors.onSurface,
       ),
@@ -93,6 +97,33 @@ class AppTheme {
       listTileTheme: const ListTileThemeData(
         minVerticalPadding: AppSpacing.md,
       ),
+    );
+  }
+
+  /// Multiply every text size by [factor], leaving styles with a null
+  /// `fontSize` untouched. A null-safe stand-in for
+  /// `TextTheme.apply(fontSizeFactor: factor)`, which asserts on null sizes.
+  static TextTheme _scaleTextTheme(TextTheme base, double factor) {
+    TextStyle? scale(TextStyle? style) => style?.fontSize == null
+        ? style
+        : style!.copyWith(fontSize: style.fontSize! * factor);
+
+    return TextTheme(
+      displayLarge: scale(base.displayLarge),
+      displayMedium: scale(base.displayMedium),
+      displaySmall: scale(base.displaySmall),
+      headlineLarge: scale(base.headlineLarge),
+      headlineMedium: scale(base.headlineMedium),
+      headlineSmall: scale(base.headlineSmall),
+      titleLarge: scale(base.titleLarge),
+      titleMedium: scale(base.titleMedium),
+      titleSmall: scale(base.titleSmall),
+      bodyLarge: scale(base.bodyLarge),
+      bodyMedium: scale(base.bodyMedium),
+      bodySmall: scale(base.bodySmall),
+      labelLarge: scale(base.labelLarge),
+      labelMedium: scale(base.labelMedium),
+      labelSmall: scale(base.labelSmall),
     );
   }
 }

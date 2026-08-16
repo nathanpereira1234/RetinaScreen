@@ -33,6 +33,13 @@ dependencies:
   # Formatting (dates in the UI). No network, no PII leaves the device.
   intl: ^0.19.0
 
+  # On-device diabetic-retinopathy grading (decision support). Inference runs
+  # locally via TFLite so the fundus image never leaves the phone. The grader
+  # only SUGGESTS a grade — a human confirms it. See services/retinopathy_grader.dart.
+  tflite_flutter: ^0.11.0
+  image: ^4.2.0
+  image_picker: ^1.1.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -45,3 +52,9 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+  # The on-device DR model. Drop a converted .tflite here as `dr_model.tflite`
+  # (see assets/models/README.md). The folder is declared so the model is
+  # bundled once present; until then the AI assist degrades gracefully.
+  assets:
+    - assets/models/
