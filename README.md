@@ -128,6 +128,40 @@ is the manager's backup / analysis escape hatch.
 New third-party packages back these: `pdf` + `printing` (report), `share_plus`
 + `path_provider` (CSV). Run `flutter pub get` after pulling this branch.
 
+## Security, language & patient reminders
+
+A second layer of program-grade features, all still **on-device / offline** and
+still inside the "does not diagnose" line.
+
+**Encryption at rest + app lock.** The SQLite file is opened through SQLCipher,
+keyed with a per-install random key in the platform keystore
+(`SecurityService`), so a stolen device file is unreadable. An optional PIN /
+biometric lock (Settings → Security) gates the running app and re-engages when
+the app is backgrounded. Full setup — including the one Android `MainActivity`
+change biometric needs — is in **docs/SECURITY.md**.
+
+**Multi-language UI.** `lib/l10n/strings.dart` holds the app's strings as one
+map per language (English, Hindi, Tamil) — no codegen, English fallback for any
+missing key, and a test (`strings_test`) that fails CI if a translation is
+missing. Switch language in Settings; `flutter_localizations` localises the
+built-in Material widgets. The hi/ta translations are a starting point and
+should be reviewed by a native speaker. The screening-entry form stays English
+(the trained worker's tool); the patient-facing report and reminders localise.
+
+**Patient reminders (WhatsApp / SMS).** From a patient record, the worker taps
+to open WhatsApp or the SMS composer with a reminder pre-filled in the
+patient's language (referral site included when known). Nothing is sent
+automatically — the worker stays in control of the patient's data, and there is
+no backend. This nudges *the patient*, directly targeting the attendance KPI.
+
+**Metrics charts.** The metrics screen now draws a screening funnel (screened →
+referable → referred → reached clinic → treated) and a 6-month trend, in pure
+Flutter (no chart dependency).
+
+New packages: `sqlcipher_flutter_libs`, `flutter_secure_storage`, `sqlite3`,
+`local_auth`, `crypto`, `shared_preferences`, `path`, `flutter_localizations`.
+Run `flutter pub get` after pulling this branch.
+
 ## Things that are load-bearing
 
 **`ReferralEvents` is append-only.** It is the evidence for the Phase 1

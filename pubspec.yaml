@@ -14,6 +14,32 @@ dependencies:
   flutter:
     sdk: flutter
 
+  # Localised Material widgets (date pickers, tooltips) for the languages the
+  # app ships. The app's OWN strings are handled by lib/l10n/strings.dart — a
+  # lightweight in-repo map, no codegen — so translations stay reviewable.
+  flutter_localizations:
+    sdk: flutter
+
+  # Encryption at rest. The on-device SQLite file is opened through SQLCipher
+  # with a per-install random key kept in the platform keystore/keychain
+  # (flutter_secure_storage). A stolen device file is unreadable without it.
+  sqlcipher_flutter_libs: ^0.6.4
+  flutter_secure_storage: ^9.2.2
+  # Imported directly for the SQLCipher open-override (open.dart). Pinned in
+  # step with drift's own sqlite3 usage.
+  sqlite3: ^2.4.0
+
+  # App lock: PIN always available; biometric when the device + build support
+  # it (needs FlutterFragmentActivity on Android — see docs/SECURITY.md).
+  local_auth: ^2.3.0
+  crypto: ^3.0.5
+
+  # Non-secret preferences (chosen language, whether the lock is enabled).
+  shared_preferences: ^2.3.2
+
+  # Path building for the encrypted database file.
+  path: ^1.9.0
+
   # State management — the provider layer is the contract between the data
   # layer (Person A) and the screens (Person B). See providers/app_providers.dart.
   flutter_riverpod: ^2.5.1

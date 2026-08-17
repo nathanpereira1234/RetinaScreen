@@ -42,10 +42,11 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
   Widget build(BuildContext context) {
     final patientsAsync = ref.watch(patientListProvider);
     final pendingCount = ref.watch(pendingReferralCountProvider).valueOrNull;
+    final s = ref.watch(stringsProvider);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Patients'),
+        title: Text(s.patients),
         actions: [
           if (pendingCount != null && pendingCount > 0)
             Padding(
@@ -76,7 +77,7 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
               decoration: InputDecoration(
                 filled: true,
                 fillColor: AppColors.surface,
-                hintText: 'Search name or phone',
+                hintText: s.searchNameOrPhone,
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: _query.isEmpty
                     ? null
@@ -116,7 +117,7 @@ class _PatientListScreenState extends ConsumerState<PatientListScreen> {
           MaterialPageRoute<void>(builder: (_) => const PatientFormScreen()),
         ),
         icon: const Icon(Icons.person_add_alt_1),
-        label: const Text('Add patient'),
+        label: Text(s.addPatient),
       ),
     );
   }
