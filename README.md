@@ -98,6 +98,36 @@ at the daily sync, not a reason to import `data/` directly.
 
 ---
 
+## Reports, metrics & export
+
+Three program-grade features sit on top of the data layer. All three run
+**fully on-device** — no network call, nothing uploaded. They read through the
+provider contract; none reaches into `data/`.
+
+**Screening report (PDF).** `ReportService` (`services/report_service.dart`)
+renders a per-screening PDF: patient identity, the human-entered result in
+plain language, the referral timeline, and a footer that states the app does
+not diagnose. The patient detail screen's per-screening menu offers **Share
+report** (system share sheet) and **Print report**. `buildScreeningReport` is
+pure (bytes in, bytes out) and unit-tested; only share/print touch the
+platform. PII leaves the device only if the health worker picks a destination.
+
+**Program metrics.** `MetricsScreen` (opened from the home app bar) shows the
+Phase-1 headline — **attendance rate**, the share of referred patients who
+actually reached the clinic. `ProgramMetrics.from` folds every screening into
+counts and rates. LOAD-BEARING: attendance counts `attended`/`treated` only —
+`booked` is deliberately excluded (`hasReachedClinic`), because booking without
+attending is the exact failure this product measures. `program_metrics_test`
+pins that down.
+
+**CSV export.** `ExportService.toCsv` builds an RFC-4180 CSV of the whole
+caseload (patients joined with screenings); the metrics screen shares it via
+the OS share sheet. Field devices hold the only copy of patient data, so this
+is the manager's backup / analysis escape hatch.
+
+New third-party packages back these: `pdf` + `printing` (report), `share_plus`
++ `path_provider` (CSV). Run `flutter pub get` after pulling this branch.
+
 ## Things that are load-bearing
 
 **`ReferralEvents` is append-only.** It is the evidence for the Phase 1

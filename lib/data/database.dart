@@ -232,6 +232,29 @@ class AppDatabase extends _$AppDatabase {
         .watch();
   }
 
+  /// Every screening across all patients, for program-metric aggregation
+  /// (see [ProgramMetrics]). Reactive: recomputes on any write. Field devices
+  /// hold one health worker's caseload, so this stays small.
+  Stream<List<Screening>> watchAllScreenings() => select(screenings).watch();
+
+  /// Every screening joined with its patient, for a flat CSV export — newest
+  /// first. One-shot (not a stream): export is a deliberate user action, not a
+  /// live view.
+  Future<List<PatientScreening>> allScreeningsForExport() {
+    final query = select(screenings).join([
+      innerJoin(patients, patients.id.equalsExp(screenings.patientId)),
+    ])
+      ..orderBy([OrderingTerm.desc(screenings.screeningDate)]);
+    return query
+        .map(
+          (row) => PatientScreening(
+            patient: row.readTable(patients),
+            screening: row.readTable(screenings),
+          ),
+        )
+        .get();
+  }
+
   /// The most recently recorded screenings across all patients.
   Stream<List<PatientScreening>> watchRecentScreenings({int limit = 10}) {
     final query = select(screenings).join([

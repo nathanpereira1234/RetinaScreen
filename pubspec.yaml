@@ -33,6 +33,20 @@ dependencies:
   # Formatting (dates in the UI). No network, no PII leaves the device.
   intl: ^0.19.0
 
+  # Screening report generation + printing. The PDF is built ON-DEVICE from
+  # data already on the phone; nothing is uploaded. `printing` hands the bytes
+  # to the OS share sheet / printer — PII only leaves if the health worker
+  # chooses to send it (consistent with the offline-first / DPDP posture).
+  pdf: ^3.11.1
+  printing: ^5.13.1
+
+  # Program-data export (CSV) via the system share sheet, and a temp-file path
+  # to hand the export to it. Same posture: the user chooses the destination.
+  # Upper-bounded below 10.3.0, where Share.shareXFiles was deprecated — keeps
+  # `flutter analyze` clean without adopting the newer ShareParams API.
+  share_plus: '>=10.0.0 <10.3.0'
+  path_provider: ^2.1.4
+
   # On-device diabetic-retinopathy grading (decision support). Inference runs
   # locally via TFLite so the fundus image never leaves the phone. The grader
   # only SUGGESTS a grade — a human confirms it. See services/retinopathy_grader.dart.

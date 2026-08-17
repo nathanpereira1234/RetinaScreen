@@ -12,10 +12,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/database.dart';
 import '../models/enums.dart';
+import '../models/program_metrics.dart';
 import '../services/crash_reporter.dart';
+import '../services/export_service.dart';
 import '../services/launcher_service.dart';
 import '../services/notification_service.dart';
 import '../services/reminder_service.dart';
+import '../services/report_service.dart';
 import '../services/retinopathy_grader.dart';
 
 // Re-export the row types and domain enums so screens get them from this one
@@ -23,10 +26,13 @@ import '../services/retinopathy_grader.dart';
 export '../data/database.dart'
     show Patient, Screening, ReferralEvent, PatientScreening;
 export '../models/enums.dart';
+export '../models/program_metrics.dart' show ProgramMetrics;
 export '../services/crash_reporter.dart' show CrashReporter;
+export '../services/export_service.dart' show ExportService;
 export '../services/launcher_service.dart' show LauncherService;
 export '../services/notification_service.dart' show NotificationService;
 export '../services/reminder_service.dart' show ReminderService;
+export '../services/report_service.dart' show ReportService, ReportProgram;
 export '../services/retinopathy_grader.dart'
     show RetinopathyGrader, RetinopathyPrediction, DrGrade;
 
@@ -85,6 +91,32 @@ final referralHistoryProvider =
   return ref.watch(databaseProvider).watchReferralHistory(screeningId);
 });
 
+/// Every screening across all patients — the raw input to [programMetrics].
+final allScreeningsProvider = StreamProvider<List<Screening>>((ref) {
+  return ref.watch(databaseProvider).watchAllScreenings();
+});
+
+/// Program-level metrics (attendance lift, referral/ungradable rates), folded
+/// from the registered-patient count and every screening. Recomputes live.
+final programMetricsProvider = Provider<AsyncValue<ProgramMetrics>>((ref) {
+  final patients = ref.watch(patientListProvider);
+  final screenings = ref.watch(allScreeningsProvider);
+  return patients.when(
+    loading: () => const AsyncValue.loading(),
+    error: (err, stack) => AsyncValue.error(err, stack),
+    data: (patientList) => screenings.when(
+      loading: () => const AsyncValue.loading(),
+      error: (err, stack) => AsyncValue.error(err, stack),
+      data: (screeningList) => AsyncValue.data(
+        ProgramMetrics.from(
+          totalPatients: patientList.length,
+          screenings: screeningList,
+        ),
+      ),
+    ),
+  );
+});
+
 // ---------------------------------------------------------------------------
 // Writes — through the repository.
 // ---------------------------------------------------------------------------
@@ -141,6 +173,10 @@ class PatientRepository {
   }
 
   Future<int> deletePatient(int id) => _db.deletePatient(id);
+
+  /// Every screening joined with its patient, for a CSV export. One-shot.
+  Future<List<PatientScreening>> allScreeningsForExport() =>
+      _db.allScreeningsForExport();
 
   /// Record a screening result for a patient. Returns the new screening id.
   Future<int> addScreening({
@@ -213,3 +249,11 @@ final retinopathyGraderProvider = Provider<RetinopathyGrader>((ref) {
   ref.onDispose(grader.dispose);
   return grader;
 });
+
+/// Builds and shares per-screening PDF reports (on-device; nothing uploaded).
+final reportServiceProvider =
+    Provider<ReportService>((ref) => const ReportService());
+
+/// Exports the caseload as CSV to the OS share sheet.
+final exportServiceProvider =
+    Provider<ExportService>((ref) => const ExportService());
