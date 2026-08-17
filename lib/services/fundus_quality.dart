@@ -55,10 +55,17 @@ class FundusQuality {
   static const double _lowField = 0.20;
   static const double _fairField = 0.35;
 
-  /// Decode [bytes] and assess. Returns null only when the bytes can't be
-  /// decoded (treat as "unknown quality", not "good").
+  /// Decode [bytes] and assess. Returns null when the bytes can't be decoded
+  /// (treat as "unknown quality", not "good"). `decodeImage` can *throw* on
+  /// malformed input (some format sniffers read past a too-short buffer), so
+  /// the decode is guarded — corrupt image data must never crash a screening.
   static FundusQuality? assessBytes(Uint8List bytes) {
-    final decoded = img.decodeImage(bytes);
+    img.Image? decoded;
+    try {
+      decoded = img.decodeImage(bytes);
+    } catch (_) {
+      return null;
+    }
     if (decoded == null) return null;
     return assess(decoded);
   }
