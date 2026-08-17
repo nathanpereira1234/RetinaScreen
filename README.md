@@ -163,6 +163,33 @@ New packages: `flutter_secure_storage`, `local_auth`, `crypto`,
 `shared_preferences`, `flutter_localizations`. Run `flutter pub get` after
 pulling this branch.
 
+## Quality, hand-off & polish
+
+- **Fundus image-quality gate** (`services/fundus_quality.dart`): scores every
+  fundus photo on-device (brightness, focus via variance-of-Laplacian, retinal
+  field coverage) and shows a good/fair/poor banner with the specific issues
+  before a grade is entered — catching the #1 cause of ungradable screenings at
+  capture time. Pure Dart on the `image` package; a *capture-quality* check
+  only, never a clinical judgement.
+- **QR referral hand-off**: every screening has a scannable referral QR (on
+  screen and embedded in the PDF report) encoding the referral so a clinic can
+  intake the patient without re-typing. `services/referral_pass.dart` builds the
+  payload; `qr_flutter` renders on screen; the report uses the `pdf` package's
+  own barcode.
+- **Voice read-out (TTS)**: a Listen button speaks the result and next step in
+  the patient's language for low-literacy field use (`services/tts_service.dart`).
+- **Polish**: dark mode (Settings → Appearance), a first-run onboarding
+  carousel, and a generated app icon + splash. Regenerate the icon/splash after
+  `flutter pub get`:
+
+  ```bash
+  dart run flutter_launcher_icons
+  dart run flutter_native_splash:create
+  ```
+
+New packages: `qr_flutter`, `flutter_tts` (+ dev `flutter_launcher_icons`,
+`flutter_native_splash`). The quality gate reuses the existing `image` dep.
+
 ## Things that are load-bearing
 
 **`ReferralEvents` is append-only.** It is the evidence for the Phase 1

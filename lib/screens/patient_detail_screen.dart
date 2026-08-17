@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 import '../providers/app_providers.dart';
 import '../theme/app_theme.dart';
@@ -215,9 +216,14 @@ class _ScreeningCard extends ConsumerWidget {
                   ),
                 ),
                 _ReferralChip(status: screening.referralStatus),
+                IconButton(
+                  icon: const Icon(Icons.volume_up_outlined),
+                  tooltip: s.listen,
+                  onPressed: () => _listen(ref),
+                ),
                 _ReportMenu(
                   strings: s,
-                  onSelected: (action) => _report(context, ref, action),
+                  onSelected: (action) => _onAction(context, ref, action),
                 ),
               ],
             ),
@@ -256,14 +262,29 @@ class _ScreeningCard extends ConsumerWidget {
     );
   }
 
-  /// Build the screening report and either share it (system share sheet) or
-  /// send it to a printer. The PDF is generated on-device from data already on
-  /// the phone — nothing is uploaded.
-  Future<void> _report(
+  /// Speak the result and next step aloud in the patient's language.
+  void _listen(WidgetRef ref) {
+    final s = ref.read(stringsProvider);
+    final lang = ref.read(localeProvider);
+    ref.read(ttsServiceProvider).speak(
+          spokenResult(s, screening.result),
+          languageCode: lang.code,
+        );
+  }
+
+  Future<void> _onAction(
     BuildContext context,
     WidgetRef ref,
     _ReportAction action,
   ) async {
+    if (action == _ReportAction.qr) {
+      await showDialog<void>(
+        context: context,
+        builder: (_) => _ReferralQrDialog(patient: patient, screening: screening),
+      );
+      return;
+    }
+    // Share / print the PDF report — built on-device, nothing uploaded.
     final messenger = ScaffoldMessenger.of(context);
     try {
       final history =
@@ -282,6 +303,8 @@ class _ScreeningCard extends ConsumerWidget {
             screening: screening,
             history: history,
           );
+        case _ReportAction.qr:
+          break; // handled above
       }
     } catch (e) {
       messenger.showSnackBar(
@@ -310,7 +333,7 @@ class _ScreeningCard extends ConsumerWidget {
   }
 }
 
-enum _ReportAction { share, print }
+enum _ReportAction { share, print, qr }
 
 class _ReportMenu extends StatelessWidget {
   const _ReportMenu({required this.strings, required this.onSelected});
@@ -340,6 +363,65 @@ class _ReportMenu extends StatelessWidget {
             leading: const Icon(Icons.print_outlined),
             title: Text(strings.printReport),
           ),
+        ),
+        PopupMenuItem(
+          value: _ReportAction.qr,
+          child: ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.qr_code_2),
+            title: Text(strings.referralQr),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// A scannable referral pass. The clinic scans the QR to intake the patient
+/// without re-typing. The payload is the same identifying data on the report.
+class _ReferralQrDialog extends ConsumerWidget {
+  const _ReferralQrDialog({required this.patient, required this.screening});
+
+  final Patient patient;
+  final Screening screening;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = ref.watch(stringsProvider);
+    final payload = buildReferralPayload(patient: patient, screening: screening);
+    return AlertDialog(
+      title: Text(s.referralQr),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            color: Colors.white,
+            child: QrImageView(
+              data: payload,
+              version: QrVersions.auto,
+              size: 220,
+              backgroundColor: Colors.white,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            patient.name,
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+          Text(resultLabel(s, screening.result)),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            s.scanAtClinic,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(MaterialLocalizations.of(context).closeButtonLabel),
         ),
       ],
     );

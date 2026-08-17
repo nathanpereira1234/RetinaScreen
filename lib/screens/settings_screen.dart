@@ -19,6 +19,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget build(BuildContext context) {
     final s = ref.watch(stringsProvider);
     final currentLang = ref.watch(localeProvider);
+    final themeMode = ref.watch(themeModeProvider);
     final prefs = ref.watch(prefsServiceProvider);
 
     return Scaffold(
@@ -36,6 +37,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 color: lang == currentLang ? AppColors.primary : null,
               ),
               onTap: () => ref.read(localeProvider.notifier).set(lang),
+            ),
+          const Divider(),
+          _SectionHeader(s.appearance),
+          for (final (mode, label) in <(ThemeMode, String)>[
+            (ThemeMode.system, s.themeSystem),
+            (ThemeMode.light, s.themeLight),
+            (ThemeMode.dark, s.themeDark),
+          ])
+            ListTile(
+              title: Text(label),
+              leading: Icon(
+                mode == themeMode
+                    ? Icons.radio_button_checked
+                    : Icons.radio_button_unchecked,
+                color: mode == themeMode ? AppColors.primary : null,
+              ),
+              onTap: () => ref.read(themeModeProvider.notifier).set(mode),
             ),
           const Divider(),
           _SectionHeader(s.security),

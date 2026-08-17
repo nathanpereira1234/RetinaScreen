@@ -20,3 +20,10 @@ String referralStatusLabel(AppStrings s, ReferralStatus status) =>
       ReferralStatus.attended => s.attended,
       ReferralStatus.treated => s.treated,
     };
+
+/// Full sentence to speak aloud for a result (TTS), in the patient's language.
+String spokenResult(AppStrings s, ScreeningResult r) => switch (r) {
+      ScreeningResult.referable => s.spokenReferable,
+      ScreeningResult.notReferable => s.spokenNotReferable,
+      ScreeningResult.ungradable => s.spokenUngradable,
+    };

@@ -72,6 +72,13 @@ dependencies:
   image: ^4.2.0
   image_picker: ^1.1.2
 
+  # Scannable referral hand-off. Pure-Dart QR rendering on screen; the report
+  # PDF uses the pdf package's own barcode support (no extra native code).
+  qr_flutter: ^4.1.0
+
+  # Spoken result read-out for low-literacy patients, in their language.
+  flutter_tts: ^4.0.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -82,6 +89,12 @@ dev_dependencies:
 
   flutter_lints: ^4.0.0
 
+  # App icon + splash generators. Run once after `flutter pub get`:
+  #   dart run flutter_launcher_icons
+  #   dart run flutter_native_splash:create
+  flutter_launcher_icons: ^0.14.1
+  flutter_native_splash: ^2.4.1
+
 flutter:
   uses-material-design: true
 
@@ -90,3 +103,20 @@ flutter:
   # bundled once present; until then the AI assist degrades gracefully.
   assets:
     - assets/models/
+
+# --- App icon (run: dart run flutter_launcher_icons) ---
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/icon/app_icon.png"
+  adaptive_icon_background: "#00695C"
+  adaptive_icon_foreground: "assets/icon/app_icon_foreground.png"
+  min_sdk_android: 21
+
+# --- Splash screen (run: dart run flutter_native_splash:create) ---
+flutter_native_splash:
+  color: "#00695C"
+  image: assets/icon/splash_logo.png
+  android_12:
+    color: "#00695C"
+    image: assets/icon/splash_logo.png
