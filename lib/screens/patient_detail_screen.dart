@@ -37,7 +37,7 @@ class PatientDetailScreen extends ConsumerWidget {
             actions: [
               IconButton(
                 icon: const Icon(Icons.edit),
-                tooltip: MaterialLocalizations.of(context).editButtonLabel,
+                tooltip: 'Edit',
                 onPressed: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(
                     builder: (_) => PatientFormScreen(existing: patient),

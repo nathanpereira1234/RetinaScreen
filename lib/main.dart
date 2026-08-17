@@ -10,7 +10,6 @@ import 'screens/home_screen.dart';
 import 'screens/lock_screen.dart';
 import 'screens/patient_detail_screen.dart';
 import 'services/crash_reporter.dart';
-import 'services/prefs_service.dart';
 import 'theme/app_theme.dart';
 
 /// Used to navigate from a tapped reminder without a BuildContext.

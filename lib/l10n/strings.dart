@@ -110,7 +110,7 @@ class AppStrings {
   String get nothingToExport => _get('nothingToExport');
 
   // Settings
-  String get language => _get('language');
+  String get languageLabel => _get('language');
   String get security => _get('security');
   String get appLock => _get('appLock');
   String get appLockSubtitle => _get('appLockSubtitle');
