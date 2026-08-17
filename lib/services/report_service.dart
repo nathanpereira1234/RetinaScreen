@@ -7,6 +7,7 @@ import 'package:printing/printing.dart';
 
 import '../data/database.dart';
 import '../models/enums.dart';
+import 'referral_pass.dart';
 
 /// Builds and shares a per-screening report as a PDF.
 ///
@@ -134,6 +135,30 @@ class ReportService {
             _sectionTitle('Referral history'),
             _timeline(history, dateTimeFmt),
           ],
+          pw.SizedBox(height: 16),
+          _sectionTitle('Referral pass'),
+          pw.Row(
+            crossAxisAlignment: pw.CrossAxisAlignment.center,
+            children: [
+              pw.BarcodeWidget(
+                barcode: pw.Barcode.qrCode(),
+                data: buildReferralPayload(
+                  patient: patient,
+                  screening: screening,
+                ),
+                width: 96,
+                height: 96,
+              ),
+              pw.SizedBox(width: 12),
+              pw.Expanded(
+                child: pw.Text(
+                  'Scan at the referral clinic to intake this patient without '
+                  're-typing.',
+                  style: const pw.TextStyle(fontSize: 10),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );

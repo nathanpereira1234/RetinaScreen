@@ -1,10 +1,11 @@
+import 'package:flutter/material.dart' show ThemeMode;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../l10n/strings.dart';
 
-/// Non-secret, non-clinical preferences: the chosen UI language and whether the
-/// app lock is on. Secrets (the DB key, the PIN) live in [SecurityService], not
-/// here.
+/// Non-secret, non-clinical preferences: chosen UI language, theme, app-lock
+/// on/off, and whether onboarding was seen. Secrets (the PIN hash) live in
+/// [SecurityService], not here.
 class PrefsService {
   PrefsService(this._prefs);
 
@@ -12,6 +13,8 @@ class PrefsService {
 
   static const _kLanguage = 'app_language';
   static const _kLockEnabled = 'app_lock_enabled';
+  static const _kThemeMode = 'theme_mode';
+  static const _kOnboardingSeen = 'onboarding_seen';
 
   AppLanguage get language =>
       AppLanguage.fromCode(_prefs.getString(_kLanguage));
@@ -23,4 +26,18 @@ class PrefsService {
 
   Future<void> setLockEnabled(bool enabled) =>
       _prefs.setBool(_kLockEnabled, enabled);
+
+  ThemeMode get themeMode => switch (_prefs.getString(_kThemeMode)) {
+        'light' => ThemeMode.light,
+        'dark' => ThemeMode.dark,
+        _ => ThemeMode.system,
+      };
+
+  Future<void> setThemeMode(ThemeMode mode) =>
+      _prefs.setString(_kThemeMode, mode.name);
+
+  bool get onboardingSeen => _prefs.getBool(_kOnboardingSeen) ?? false;
+
+  Future<void> setOnboardingSeen(bool seen) =>
+      _prefs.setBool(_kOnboardingSeen, seen);
 }

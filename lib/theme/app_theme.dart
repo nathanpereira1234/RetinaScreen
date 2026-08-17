@@ -100,6 +100,53 @@ class AppTheme {
     );
   }
 
+  /// Dark theme — same teal identity, tuned for low light / battery on OLED
+  /// field phones. Shares the legible text scaling and generous touch targets.
+  static ThemeData get dark {
+    final scheme = ColorScheme.fromSeed(
+      seedColor: AppColors.primary,
+      brightness: Brightness.dark,
+      primary: AppColors.primaryLight,
+    );
+
+    final base = ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.dark,
+      colorScheme: scheme,
+    );
+
+    return base.copyWith(
+      textTheme: _scaleTextTheme(base.textTheme, 1.05),
+      appBarTheme: AppBarTheme(
+        backgroundColor: scheme.surface,
+        foregroundColor: scheme.onSurface,
+        centerTitle: false,
+        elevation: 0,
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          minimumSize: const Size.fromHeight(AppSpacing.touchTarget),
+          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppSpacing.sm),
+          ),
+        ),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.sm),
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.md,
+        ),
+      ),
+      listTileTheme: const ListTileThemeData(
+        minVerticalPadding: AppSpacing.md,
+      ),
+    );
+  }
+
   /// Multiply every text size by [factor], leaving styles with a null
   /// `fontSize` untouched. A null-safe stand-in for
   /// `TextTheme.apply(fontSizeFactor: factor)`, which asserts on null sizes.

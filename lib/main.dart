@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'providers/app_providers.dart';
 import 'screens/home_screen.dart';
 import 'screens/lock_screen.dart';
+import 'screens/onboarding_screen.dart';
 import 'screens/patient_detail_screen.dart';
 import 'services/crash_reporter.dart';
 import 'theme/app_theme.dart';
@@ -101,12 +102,20 @@ class _RetinaScreenAppState extends ConsumerState<RetinaScreenApp>
   Widget build(BuildContext context) {
     final language = ref.watch(localeProvider);
     final locked = ref.watch(lockControllerProvider);
+    final onboarded = ref.watch(onboardingSeenProvider);
+    final themeMode = ref.watch(themeModeProvider);
+
+    final Widget home = !onboarded
+        ? const OnboardingScreen()
+        : (locked ? const LockScreen() : const HomeScreen());
 
     return MaterialApp(
       title: 'RetinaScreen',
       debugShowCheckedModeBanner: false,
       navigatorKey: navigatorKey,
       theme: AppTheme.light,
+      darkTheme: AppTheme.dark,
+      themeMode: themeMode,
       locale: Locale(language.code),
       supportedLocales: [
         for (final l in AppLanguage.values) Locale(l.code),
@@ -116,7 +125,7 @@ class _RetinaScreenAppState extends ConsumerState<RetinaScreenApp>
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      home: locked ? const LockScreen() : const HomeScreen(),
+      home: home,
     );
   }
 }

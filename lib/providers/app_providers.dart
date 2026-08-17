@@ -8,6 +8,7 @@
 /// UI refreshes itself after any write.
 library;
 
+import 'package:flutter/material.dart' show ThemeMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/database.dart';
@@ -23,13 +24,19 @@ import '../services/reminder_service.dart';
 import '../services/report_service.dart';
 import '../services/retinopathy_grader.dart';
 import '../services/security_service.dart';
+import '../services/tts_service.dart';
 
 // Re-export the row types and domain enums so screens get them from this one
 // import and never reach into `data/`.
 export '../data/database.dart'
     show Patient, Screening, ReferralEvent, PatientScreening;
 export '../l10n/strings.dart' show AppLanguage, AppStrings;
-export '../l10n/labels.dart' show resultLabel, referralStatusLabel;
+export '../l10n/labels.dart'
+    show resultLabel, referralStatusLabel, spokenResult;
+export '../services/fundus_quality.dart'
+    show FundusQuality, FundusVerdict, FundusIssue;
+export '../services/referral_pass.dart' show buildReferralPayload;
+export '../services/tts_service.dart' show TtsService;
 export '../models/enums.dart';
 export '../models/program_metrics.dart' show ProgramMetrics;
 export '../services/crash_reporter.dart' show CrashReporter;
@@ -94,6 +101,47 @@ class LockController extends StateNotifier<bool> {
   void lock() => state = true;
   void unlock() => state = false;
 }
+
+/// Light / dark / system theme, persisted via [PrefsService].
+final themeModeProvider =
+    StateNotifierProvider<ThemeModeController, ThemeMode>((ref) {
+  return ThemeModeController(ref.watch(prefsServiceProvider));
+});
+
+class ThemeModeController extends StateNotifier<ThemeMode> {
+  ThemeModeController(this._prefs) : super(_prefs.themeMode);
+
+  final PrefsService _prefs;
+
+  Future<void> set(ThemeMode mode) async {
+    state = mode;
+    await _prefs.setThemeMode(mode);
+  }
+}
+
+/// Whether the first-run onboarding has been completed.
+final onboardingSeenProvider =
+    StateNotifierProvider<OnboardingController, bool>((ref) {
+  return OnboardingController(ref.watch(prefsServiceProvider));
+});
+
+class OnboardingController extends StateNotifier<bool> {
+  OnboardingController(this._prefs) : super(_prefs.onboardingSeen);
+
+  final PrefsService _prefs;
+
+  Future<void> complete() async {
+    state = true;
+    await _prefs.setOnboardingSeen(true);
+  }
+}
+
+/// Text-to-speech for spoken result read-out.
+final ttsServiceProvider = Provider<TtsService>((ref) {
+  final tts = TtsService();
+  ref.onDispose(tts.dispose);
+  return tts;
+});
 
 // ---------------------------------------------------------------------------
 // Reads — all streams.

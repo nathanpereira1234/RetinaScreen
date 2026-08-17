@@ -40,6 +40,7 @@ class _ScreeningFormScreenState extends ConsumerState<ScreeningFormScreen> {
   // --- AI assist (decision support only) ---
   Uint8List? _fundusImage;
   RetinopathyPrediction? _prediction;
+  FundusQuality? _quality;
   bool _grading = false;
 
   static const Map<ScreeningResult, String> _resultLabels = {
@@ -72,9 +73,13 @@ class _ScreeningFormScreenState extends ConsumerState<ScreeningFormScreen> {
     final picked = await ImagePicker().pickImage(source: source, maxWidth: 1600);
     if (picked == null) return;
     final bytes = await picked.readAsBytes();
+    // Capture-quality gate: score the photo before grading so a bad capture is
+    // caught and retaken, not silently graded. Pure on-device analysis.
+    final quality = FundusQuality.assessBytes(bytes);
     if (!mounted) return;
     setState(() {
       _fundusImage = bytes;
+      _quality = quality;
       _grading = true;
       _prediction = null;
     });
@@ -279,6 +284,10 @@ class _ScreeningFormScreenState extends ConsumerState<ScreeningFormScreen> {
                   fit: BoxFit.cover,
                 ),
               ),
+            if (_quality != null) ...[
+              const SizedBox(height: AppSpacing.sm),
+              _QualityBanner(quality: _quality!),
+            ],
             const SizedBox(height: AppSpacing.sm),
             Row(
               children: [
@@ -330,6 +339,71 @@ class _ScreeningFormScreenState extends ConsumerState<ScreeningFormScreen> {
       ),
     );
   }
+}
+
+/// Capture-quality feedback for a fundus photo: a coloured banner with the
+/// verdict, the specific issues found, and a retake hint when it's poor.
+class _QualityBanner extends ConsumerWidget {
+  const _QualityBanner({required this.quality});
+
+  final FundusQuality quality;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = ref.watch(stringsProvider);
+    final (label, color, icon) = switch (quality.verdict) {
+      FundusVerdict.good => (s.qualityGood, AppColors.reached, Icons.check_circle),
+      FundusVerdict.fair => (s.qualityFair, AppColors.ungradable, Icons.info),
+      FundusVerdict.poor => (s.qualityPoor, AppColors.referable, Icons.error),
+    };
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(AppSpacing.sm),
+        border: Border.all(color: color),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: color, size: 18),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text(
+                  '${s.imageQuality}: $label',
+                  style: TextStyle(fontWeight: FontWeight.w600, color: color),
+                ),
+              ),
+            ],
+          ),
+          if (quality.issues.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              quality.issues.map((i) => _issueLabel(s, i)).join(' · '),
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+          if (quality.verdict == FundusVerdict.poor) ...[
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              s.retakeAdvised,
+              style: TextStyle(color: color, fontWeight: FontWeight.w500),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  static String _issueLabel(AppStrings s, FundusIssue issue) => switch (issue) {
+        FundusIssue.tooDark => s.issueTooDark,
+        FundusIssue.tooBright => s.issueTooBright,
+        FundusIssue.blurry => s.issueBlurry,
+        FundusIssue.lowField => s.issueLowField,
+      };
 }
 
 String _formatDate(DateTime d) =>
