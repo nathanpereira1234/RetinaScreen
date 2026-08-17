@@ -1,0 +1,353 @@
+/// Lightweight in-app localisation (no codegen).
+///
+/// The app's own copy lives here as one map per language. `flutter_localizations`
+/// still localises Material's built-in widgets (date pickers, etc.) via the
+/// delegates wired in `main.dart`; this file covers RetinaScreen's strings.
+///
+/// Design goals:
+/// - **Compile-safe.** Missing keys fall back to English, never crash.
+/// - **Reviewable.** Translations sit in plain maps a native speaker can read.
+/// - **Testable.** `test/strings_test.dart` asserts every language defines the
+///   full English key set, so a forgotten translation is caught in CI.
+///
+/// Translations for `hi`/`ta` are a starting point and should be reviewed by a
+/// native speaker before a real deployment.
+library;
+
+/// The languages the app ships. `code` matches the stored `preferredLanguage`
+/// and the [Locale] language code.
+enum AppLanguage {
+  en('en', 'English'),
+  hi('hi', 'हिन्दी'),
+  ta('ta', 'தமிழ்');
+
+  const AppLanguage(this.code, this.label);
+
+  final String code;
+
+  /// The language's own name (an endonym), so the picker is readable to a
+  /// speaker regardless of the current UI language.
+  final String label;
+
+  static AppLanguage fromCode(String? code) => AppLanguage.values.firstWhere(
+        (l) => l.code == code,
+        orElse: () => AppLanguage.en,
+      );
+}
+
+/// Resolved strings for one language. Getters read the map; anything missing
+/// falls back to English so the UI is never blank.
+class AppStrings {
+  const AppStrings(this.language, this._table);
+
+  final AppLanguage language;
+  final Map<String, String> _table;
+
+  static AppStrings of(AppLanguage language) =>
+      AppStrings(language, _tables[language] ?? _en);
+
+  String _get(String key) => _table[key] ?? _en[key] ?? key;
+
+  String _fill(String key, Map<String, String> values) {
+    var out = _get(key);
+    values.forEach((k, v) => out = out.replaceAll('{$k}', v));
+    return out;
+  }
+
+  // Navigation / shell
+  String get appTitle => _get('appTitle');
+  String get allPatients => _get('allPatients');
+  String get programMetrics => _get('programMetrics');
+  String get settings => _get('settings');
+
+  // Home
+  String get dueForFollowUp => _get('dueForFollowUp');
+  String get recentlyScreened => _get('recentlyScreened');
+  String get noPendingFollowUps => _get('noPendingFollowUps');
+  String get noScreeningsYet => _get('noScreeningsYet');
+  String get referralsAwaiting => _get('referralsAwaiting');
+  String get addPatient => _get('addPatient');
+
+  // Patient list
+  String get patients => _get('patients');
+  String get searchNameOrPhone => _get('searchNameOrPhone');
+  String get noPatientsYet => _get('noPatientsYet');
+
+  // Patient detail
+  String get screenings => _get('screenings');
+  String get noScreeningsAddBelow => _get('noScreeningsAddBelow');
+  String get addScreening => _get('addScreening');
+  String get call => _get('call');
+  String get navigate => _get('navigate');
+  String get remindPatient => _get('remindPatient');
+  String get shareReport => _get('shareReport');
+  String get printReport => _get('printReport');
+  String get screeningReport => _get('screeningReport');
+  String get years => _get('years');
+
+  // Results
+  String get referable => _get('referable');
+  String get notReferable => _get('notReferable');
+  String get ungradable => _get('ungradable');
+
+  // Referral status
+  String get noReferral => _get('noReferral');
+  String get referred => _get('referred');
+  String get booked => _get('booked');
+  String get attended => _get('attended');
+  String get treated => _get('treated');
+  String markStatus(String status) => _fill('markStatus', {'status': status});
+
+  // Metrics
+  String get attendanceHeadline => _get('attendanceHeadline');
+  String get reachedOfReferred => _get('reachedOfReferred');
+  String get referralRate => _get('referralRate');
+  String get ungradableRate => _get('ungradableRate');
+  String get treatmentRate => _get('treatmentRate');
+  String get screeningFunnel => _get('screeningFunnel');
+  String get attendanceOverTime => _get('attendanceOverTime');
+  String get exportCsv => _get('exportCsv');
+  String get nothingToExport => _get('nothingToExport');
+
+  // Settings
+  String get language => _get('language');
+  String get security => _get('security');
+  String get appLock => _get('appLock');
+  String get appLockSubtitle => _get('appLockSubtitle');
+  String get changePin => _get('changePin');
+  String get about => _get('about');
+  String get doesNotDiagnose => _get('doesNotDiagnose');
+
+  // Lock screen
+  String get unlock => _get('unlock');
+  String get enterPin => _get('enterPin');
+  String get setPin => _get('setPin');
+  String get confirmPin => _get('confirmPin');
+  String get wrongPin => _get('wrongPin');
+  String get pinsDoNotMatch => _get('pinsDoNotMatch');
+  String get useBiometric => _get('useBiometric');
+
+  // Patient reminder message (templated). {name}, {site}.
+  String reminderWithSite({required String name, required String site}) =>
+      _fill('reminderWithSite', {'name': name, 'site': site});
+  String reminderNoSite({required String name}) =>
+      _fill('reminderNoSite', {'name': name});
+}
+
+// ---------------------------------------------------------------------------
+// Tables. English is the source of truth; hi/ta mirror its keys.
+// ---------------------------------------------------------------------------
+
+const Map<String, String> _en = {
+  'appTitle': 'RetinaScreen',
+  'allPatients': 'All patients',
+  'programMetrics': 'Program metrics',
+  'settings': 'Settings',
+  'dueForFollowUp': 'Due for follow-up',
+  'recentlyScreened': 'Recently screened',
+  'noPendingFollowUps': 'No pending follow-ups.',
+  'noScreeningsYet': 'No screenings recorded yet.',
+  'referralsAwaiting': 'referrals awaiting follow-up',
+  'addPatient': 'Add patient',
+  'patients': 'Patients',
+  'searchNameOrPhone': 'Search name or phone',
+  'noPatientsYet': 'No patients yet',
+  'screenings': 'Screenings',
+  'noScreeningsAddBelow': 'No screenings yet. Add one below.',
+  'addScreening': 'Add screening',
+  'call': 'Call',
+  'navigate': 'Navigate',
+  'remindPatient': 'Remind patient',
+  'shareReport': 'Share report',
+  'printReport': 'Print report',
+  'screeningReport': 'Screening report',
+  'years': 'yrs',
+  'referable': 'Referable',
+  'notReferable': 'Not referable',
+  'ungradable': 'Ungradable',
+  'noReferral': 'No referral',
+  'referred': 'Referred',
+  'booked': 'Booked',
+  'attended': 'Attended',
+  'treated': 'Treated',
+  'markStatus': 'Mark {status}',
+  'attendanceHeadline': 'of referred patients reached the clinic',
+  'reachedOfReferred': '{reached} of {referred} referrals',
+  'referralRate': 'Referral rate',
+  'ungradableRate': 'Ungradable rate',
+  'treatmentRate': 'Treatment rate',
+  'screeningFunnel': 'Screening funnel',
+  'attendanceOverTime': 'Screenings over time',
+  'exportCsv': 'Export CSV',
+  'nothingToExport': 'Nothing to export yet.',
+  'language': 'Language',
+  'security': 'Security',
+  'appLock': 'App lock',
+  'appLockSubtitle': 'Require a PIN or biometric to open the app',
+  'changePin': 'Change PIN',
+  'about': 'About',
+  'doesNotDiagnose':
+      'This app does not diagnose. A trained health worker records every '
+          'result; the app explains it and helps the patient follow up.',
+  'unlock': 'Unlock',
+  'enterPin': 'Enter PIN',
+  'setPin': 'Set a PIN',
+  'confirmPin': 'Confirm PIN',
+  'wrongPin': 'Wrong PIN. Try again.',
+  'pinsDoNotMatch': 'PINs do not match.',
+  'useBiometric': 'Use biometric',
+  'reminderWithSite':
+      'Hello {name}, this is a reminder from your eye-screening program. '
+          'Please visit {site} for your eye check-up. Attending is important '
+          'for your eye health.',
+  'reminderNoSite':
+      'Hello {name}, this is a reminder from your eye-screening program. '
+          'Please visit the eye clinic for your check-up. Attending is '
+          'important for your eye health.',
+};
+
+const Map<String, String> _hi = {
+  'appTitle': 'RetinaScreen',
+  'allPatients': 'सभी मरीज़',
+  'programMetrics': 'कार्यक्रम आँकड़े',
+  'settings': 'सेटिंग्स',
+  'dueForFollowUp': 'फ़ॉलो-अप बाकी',
+  'recentlyScreened': 'हाल में जाँचे गए',
+  'noPendingFollowUps': 'कोई फ़ॉलो-अप बाकी नहीं।',
+  'noScreeningsYet': 'अभी तक कोई जाँच दर्ज नहीं।',
+  'referralsAwaiting': 'रेफ़रल फ़ॉलो-अप के इंतज़ार में',
+  'addPatient': 'मरीज़ जोड़ें',
+  'patients': 'मरीज़',
+  'searchNameOrPhone': 'नाम या फ़ोन खोजें',
+  'noPatientsYet': 'अभी कोई मरीज़ नहीं',
+  'screenings': 'जाँचें',
+  'noScreeningsAddBelow': 'अभी कोई जाँच नहीं। नीचे जोड़ें।',
+  'addScreening': 'जाँच जोड़ें',
+  'call': 'कॉल',
+  'navigate': 'रास्ता',
+  'remindPatient': 'मरीज़ को याद दिलाएँ',
+  'shareReport': 'रिपोर्ट साझा करें',
+  'printReport': 'रिपोर्ट प्रिंट करें',
+  'screeningReport': 'जाँच रिपोर्ट',
+  'years': 'साल',
+  'referable': 'रेफ़र करने योग्य',
+  'notReferable': 'रेफ़रल की ज़रूरत नहीं',
+  'ungradable': 'जाँच योग्य नहीं',
+  'noReferral': 'कोई रेफ़रल नहीं',
+  'referred': 'रेफ़र किया',
+  'booked': 'बुक किया',
+  'attended': 'पहुँचे',
+  'treated': 'इलाज हुआ',
+  'markStatus': '{status} चिह्नित करें',
+  'attendanceHeadline': 'रेफ़र मरीज़ों में से क्लिनिक पहुँचे',
+  'reachedOfReferred': '{referred} में से {reached} पहुँचे',
+  'referralRate': 'रेफ़रल दर',
+  'ungradableRate': 'अयोग्य दर',
+  'treatmentRate': 'इलाज दर',
+  'screeningFunnel': 'जाँच फ़नल',
+  'attendanceOverTime': 'समय के साथ जाँचें',
+  'exportCsv': 'CSV निर्यात',
+  'nothingToExport': 'अभी निर्यात के लिए कुछ नहीं।',
+  'language': 'भाषा',
+  'security': 'सुरक्षा',
+  'appLock': 'ऐप लॉक',
+  'appLockSubtitle': 'ऐप खोलने के लिए PIN या बायोमेट्रिक ज़रूरी',
+  'changePin': 'PIN बदलें',
+  'about': 'बारे में',
+  'doesNotDiagnose':
+      'यह ऐप निदान नहीं करता। हर नतीजा प्रशिक्षित स्वास्थ्यकर्मी दर्ज करता है; '
+          'ऐप उसे समझाता है और फ़ॉलो-अप में मदद करता है।',
+  'unlock': 'अनलॉक',
+  'enterPin': 'PIN दर्ज करें',
+  'setPin': 'PIN सेट करें',
+  'confirmPin': 'PIN की पुष्टि करें',
+  'wrongPin': 'ग़लत PIN। फिर कोशिश करें।',
+  'pinsDoNotMatch': 'PIN मेल नहीं खाते।',
+  'useBiometric': 'बायोमेट्रिक इस्तेमाल करें',
+  'reminderWithSite':
+      'नमस्ते {name}, यह आपके नेत्र-जाँच कार्यक्रम की याद दिलाने वाला संदेश है। '
+          'कृपया अपनी आँखों की जाँच के लिए {site} जाएँ। पहुँचना आपकी आँखों की '
+          'सेहत के लिए ज़रूरी है।',
+  'reminderNoSite':
+      'नमस्ते {name}, यह आपके नेत्र-जाँच कार्यक्रम की याद दिलाने वाला संदेश है। '
+          'कृपया जाँच के लिए नेत्र क्लिनिक जाएँ। पहुँचना आपकी आँखों की सेहत के '
+          'लिए ज़रूरी है।',
+};
+
+const Map<String, String> _ta = {
+  'appTitle': 'RetinaScreen',
+  'allPatients': 'அனைத்து நோயாளிகள்',
+  'programMetrics': 'திட்ட அளவீடுகள்',
+  'settings': 'அமைப்புகள்',
+  'dueForFollowUp': 'பின்தொடர்தல் நிலுவை',
+  'recentlyScreened': 'சமீபத்தில் பரிசோதிக்கப்பட்டவர்',
+  'noPendingFollowUps': 'நிலுவையில் பின்தொடர்தல் இல்லை.',
+  'noScreeningsYet': 'இதுவரை பரிசோதனை பதிவு இல்லை.',
+  'referralsAwaiting': 'பரிந்துரைகள் பின்தொடர்தலுக்கு காத்திருக்கின்றன',
+  'addPatient': 'நோயாளியைச் சேர்',
+  'patients': 'நோயாளிகள்',
+  'searchNameOrPhone': 'பெயர் அல்லது தொலைபேசி தேடு',
+  'noPatientsYet': 'இதுவரை நோயாளிகள் இல்லை',
+  'screenings': 'பரிசோதனைகள்',
+  'noScreeningsAddBelow': 'இதுவரை பரிசோதனை இல்லை. கீழே சேர்க்கவும்.',
+  'addScreening': 'பரிசோதனையைச் சேர்',
+  'call': 'அழை',
+  'navigate': 'வழி',
+  'remindPatient': 'நோயாளிக்கு நினைவூட்டு',
+  'shareReport': 'அறிக்கையைப் பகிர்',
+  'printReport': 'அறிக்கையை அச்சிடு',
+  'screeningReport': 'பரிசோதனை அறிக்கை',
+  'years': 'வயது',
+  'referable': 'பரிந்துரைக்கத்தக்கது',
+  'notReferable': 'பரிந்துரை தேவையில்லை',
+  'ungradable': 'மதிப்பிட முடியாது',
+  'noReferral': 'பரிந்துரை இல்லை',
+  'referred': 'பரிந்துரைக்கப்பட்டது',
+  'booked': 'முன்பதிவு',
+  'attended': 'வந்தடைந்தார்',
+  'treated': 'சிகிச்சை',
+  'markStatus': '{status} எனக் குறி',
+  'attendanceHeadline': 'பரிந்துரைக்கப்பட்டவர்களில் மருத்துவமனை சென்றவர்',
+  'reachedOfReferred': '{referred} இல் {reached} சென்றனர்',
+  'referralRate': 'பரிந்துரை விகிதம்',
+  'ungradableRate': 'மதிப்பிடமுடியா விகிதம்',
+  'treatmentRate': 'சிகிச்சை விகிதம்',
+  'screeningFunnel': 'பரிசோதனை புனல்',
+  'attendanceOverTime': 'காலப்போக்கில் பரிசோதனைகள்',
+  'exportCsv': 'CSV ஏற்றுமதி',
+  'nothingToExport': 'ஏற்றுமதி செய்ய எதுவும் இல்லை.',
+  'language': 'மொழி',
+  'security': 'பாதுகாப்பு',
+  'appLock': 'ஆப் பூட்டு',
+  'appLockSubtitle': 'ஆப்பைத் திறக்க PIN அல்லது பயோமெட்ரிக் தேவை',
+  'changePin': 'PIN மாற்று',
+  'about': 'பற்றி',
+  'doesNotDiagnose':
+      'இந்த ஆப் நோயறியாது. ஒவ்வொரு முடிவையும் பயிற்சி பெற்ற சுகாதார பணியாளர் '
+          'பதிவு செய்கிறார்; ஆப் அதை விளக்கி பின்தொடர்தலுக்கு உதவுகிறது.',
+  'unlock': 'திற',
+  'enterPin': 'PIN உள்ளிடு',
+  'setPin': 'PIN அமை',
+  'confirmPin': 'PIN உறுதிப்படுத்து',
+  'wrongPin': 'தவறான PIN. மீண்டும் முயற்சி செய்.',
+  'pinsDoNotMatch': 'PIN பொருந்தவில்லை.',
+  'useBiometric': 'பயோமெட்ரிக் பயன்படுத்து',
+  'reminderWithSite':
+      'வணக்கம் {name}, இது உங்கள் கண் பரிசோதனை திட்டத்தின் நினைவூட்டல். '
+          'உங்கள் கண் பரிசோதனைக்கு {site} க்கு வரவும். வருகை உங்கள் கண் '
+          'ஆரோக்கியத்திற்கு முக்கியம்.',
+  'reminderNoSite':
+      'வணக்கம் {name}, இது உங்கள் கண் பரிசோதனை திட்டத்தின் நினைவூட்டல். '
+          'பரிசோதனைக்கு கண் மருத்துவமனைக்கு வரவும். வருகை உங்கள் கண் '
+          'ஆரோக்கியத்திற்கு முக்கியம்.',
+};
+
+const Map<AppLanguage, Map<String, String>> _tables = {
+  AppLanguage.en: _en,
+  AppLanguage.hi: _hi,
+  AppLanguage.ta: _ta,
+};
+
+/// Exposed for the completeness test.
+Map<String, String> get englishStrings => _en;
+Map<AppLanguage, Map<String, String>> get allStringTables => _tables;

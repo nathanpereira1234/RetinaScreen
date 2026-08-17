@@ -1,5 +1,12 @@
+import 'dart:io';
+
 import 'package:drift/drift.dart';
+import 'package:drift/native.dart';
 import 'package:drift_flutter/drift_flutter.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
+import 'package:sqlcipher_flutter_libs/sqlcipher_flutter_libs.dart';
+import 'package:sqlite3/open.dart';
 
 import '../models/enums.dart';
 
@@ -77,12 +84,49 @@ class PatientScreening {
 // Database (A06, A10) + queries / DAO (A09) + referral transaction (A17)
 // ---------------------------------------------------------------------------
 
+/// Opens the on-device database file through SQLCipher, keyed with [passphrase]
+/// (fetched lazily so the caller can pull it from secure storage). The key
+/// encrypts the file at rest — a copy pulled off a stolen device is unreadable
+/// without it.
+QueryExecutor _openEncrypted(Future<String> Function() passphrase) {
+  return LazyDatabase(() async {
+    if (Platform.isAndroid) {
+      // Use the bundled SQLCipher build, not the system SQLite.
+      await applyWorkaroundToOpenSqlCipherOnOldAndroidVersions();
+      open.overrideFor(OperatingSystem.android, openCipherOnAndroid);
+    }
+    final dir = await getApplicationDocumentsDirectory();
+    final file = File(p.join(dir.path, 'retinascreen.db'));
+    final key = await passphrase();
+    return NativeDatabase(
+      file,
+      setup: (db) {
+        // Fail loudly if the linked SQLite is not SQLCipher — otherwise the
+        // "encrypted" DB would silently be plaintext.
+        final cipher = db.select('PRAGMA cipher_version;');
+        if (cipher.isEmpty) {
+          throw StateError(
+            'SQLCipher not available. Check the sqlcipher_flutter_libs setup '
+            '(see docs/SECURITY.md).',
+          );
+        }
+        db.execute("PRAGMA key = '${key.replaceAll("'", "''")}';");
+      },
+    );
+  });
+}
+
 @DriftDatabase(tables: [Patients, Screenings, ReferralEvents])
 class AppDatabase extends _$AppDatabase {
-  /// Production constructor opens the on-device file. Tests pass an in-memory
-  /// executor: `AppDatabase(NativeDatabase.memory())`.
+  /// Test / custom-executor constructor. Tests pass an in-memory executor:
+  /// `AppDatabase(NativeDatabase.memory())`.
   AppDatabase([QueryExecutor? executor])
       : super(executor ?? driftDatabase(name: 'retinascreen'));
+
+  /// Production constructor: opens the encrypted on-device file. [passphrase]
+  /// is resolved lazily (from secure storage) on first query.
+  AppDatabase.encrypted(Future<String> Function() passphrase)
+      : super(_openEncrypted(passphrase));
 
   @override
   int get schemaVersion => 1;

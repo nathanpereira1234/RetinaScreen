@@ -7,6 +7,7 @@ import 'metrics_screen.dart';
 import 'patient_detail_screen.dart';
 import 'patient_form_screen.dart';
 import 'patient_list_screen.dart';
+import 'settings_screen.dart';
 
 /// Health-worker home / dashboard (A19): a live pending-referral count, the
 /// patients due for follow-up, and recently screened patients — the daily view.
@@ -19,14 +20,15 @@ class HomeScreen extends ConsumerWidget {
         ref.watch(pendingReferralCountProvider).valueOrNull ?? 0;
     final dueAsync = ref.watch(dueFollowUpsProvider);
     final recentAsync = ref.watch(recentScreeningsProvider);
+    final s = ref.watch(stringsProvider);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('RetinaScreen'),
+        title: Text(s.appTitle),
         actions: [
           IconButton(
             icon: const Icon(Icons.insights_outlined),
-            tooltip: 'Program metrics',
+            tooltip: s.programMetrics,
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute<void>(
                 builder: (_) => const MetricsScreen(),
@@ -35,10 +37,19 @@ class HomeScreen extends ConsumerWidget {
           ),
           IconButton(
             icon: const Icon(Icons.people_outline),
-            tooltip: 'All patients',
+            tooltip: s.allPatients,
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute<void>(
                 builder: (_) => const PatientListScreen(),
+              ),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            tooltip: s.settings,
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const SettingsScreen(),
               ),
             ),
           ),
@@ -47,39 +58,39 @@ class HomeScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [
-          _PendingSummary(count: pendingCount),
+          _PendingSummary(count: pendingCount, label: s.referralsAwaiting),
           const SizedBox(height: AppSpacing.lg),
-          const _SectionTitle('Due for follow-up'),
+          _SectionTitle(s.dueForFollowUp),
           const SizedBox(height: AppSpacing.sm),
           dueAsync.when(
             loading: () => const _Loading(),
             error: (e, _) => Text('Error: $e'),
             data: (items) => items.isEmpty
-                ? const _EmptyLine('No pending follow-ups.')
+                ? _EmptyLine(s.noPendingFollowUps)
                 : Column(
                     children: [
                       for (final entry in items)
                         _DashboardTile(
                           entry: entry,
-                          subtitle: _followUpSubtitle(entry),
+                          subtitle: _followUpSubtitle(s, entry),
                         ),
                     ],
                   ),
           ),
           const SizedBox(height: AppSpacing.lg),
-          const _SectionTitle('Recently screened'),
+          _SectionTitle(s.recentlyScreened),
           const SizedBox(height: AppSpacing.sm),
           recentAsync.when(
             loading: () => const _Loading(),
             error: (e, _) => Text('Error: $e'),
             data: (items) => items.isEmpty
-                ? const _EmptyLine('No screenings recorded yet.')
+                ? _EmptyLine(s.noScreeningsYet)
                 : Column(
                     children: [
                       for (final entry in items)
                         _DashboardTile(
                           entry: entry,
-                          subtitle: _recentSubtitle(entry),
+                          subtitle: _recentSubtitle(s, entry),
                         ),
                     ],
                   ),
@@ -92,25 +103,26 @@ class HomeScreen extends ConsumerWidget {
           MaterialPageRoute<void>(builder: (_) => const PatientFormScreen()),
         ),
         icon: const Icon(Icons.person_add_alt_1),
-        label: const Text('Add patient'),
+        label: Text(s.addPatient),
       ),
     );
   }
 
-  String _followUpSubtitle(PatientScreening e) {
-    final status = e.screening.referralStatus.name;
+  String _followUpSubtitle(AppStrings s, PatientScreening e) {
+    final status = referralStatusLabel(s, e.screening.referralStatus);
     final due = e.screening.nextReminderAt;
-    return due == null ? status : '$status · due ${_formatDate(due)}';
+    return due == null ? status : '$status · ${_formatDate(due)}';
   }
 
-  String _recentSubtitle(PatientScreening e) =>
-      '${_resultText(e.screening.result)} · ${_formatDate(e.screening.screeningDate)}';
+  String _recentSubtitle(AppStrings s, PatientScreening e) =>
+      '${resultLabel(s, e.screening.result)} · ${_formatDate(e.screening.screeningDate)}';
 }
 
 class _PendingSummary extends StatelessWidget {
-  const _PendingSummary({required this.count});
+  const _PendingSummary({required this.count, required this.label});
 
   final int count;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
@@ -128,10 +140,10 @@ class _PendingSummary extends StatelessWidget {
                   ),
             ),
             const SizedBox(width: AppSpacing.md),
-            const Expanded(
+            Expanded(
               child: Text(
-                'referrals awaiting follow-up',
-                style: TextStyle(color: Colors.white, fontSize: 16),
+                label,
+                style: const TextStyle(color: Colors.white, fontSize: 16),
               ),
             ),
           ],
@@ -207,12 +219,6 @@ class _EmptyLine extends StatelessWidget {
         child: Text(text, style: Theme.of(context).textTheme.bodyMedium),
       );
 }
-
-String _resultText(ScreeningResult r) => switch (r) {
-      ScreeningResult.referable => 'Referable',
-      ScreeningResult.notReferable => 'Not referable',
-      ScreeningResult.ungradable => 'Ungradable',
-    };
 
 String _formatDate(DateTime d) =>
     '${d.day.toString().padLeft(2, '0')}/'

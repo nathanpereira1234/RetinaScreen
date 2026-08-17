@@ -11,23 +11,30 @@ library;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/database.dart';
+import '../l10n/strings.dart';
 import '../models/enums.dart';
 import '../models/program_metrics.dart';
 import '../services/crash_reporter.dart';
 import '../services/export_service.dart';
 import '../services/launcher_service.dart';
 import '../services/notification_service.dart';
+import '../services/prefs_service.dart';
 import '../services/reminder_service.dart';
 import '../services/report_service.dart';
 import '../services/retinopathy_grader.dart';
+import '../services/security_service.dart';
 
 // Re-export the row types and domain enums so screens get them from this one
 // import and never reach into `data/`.
 export '../data/database.dart'
     show Patient, Screening, ReferralEvent, PatientScreening;
+export '../l10n/strings.dart' show AppLanguage, AppStrings;
+export '../l10n/labels.dart' show resultLabel, referralStatusLabel;
 export '../models/enums.dart';
 export '../models/program_metrics.dart' show ProgramMetrics;
 export '../services/crash_reporter.dart' show CrashReporter;
+export '../services/prefs_service.dart' show PrefsService;
+export '../services/security_service.dart' show SecurityService;
 export '../services/export_service.dart' show ExportService;
 export '../services/launcher_service.dart' show LauncherService;
 export '../services/notification_service.dart' show NotificationService;
@@ -36,12 +43,59 @@ export '../services/report_service.dart' show ReportService, ReportProgram;
 export '../services/retinopathy_grader.dart'
     show RetinopathyGrader, RetinopathyPrediction, DrGrade;
 
-/// The single database instance for the app's lifetime.
+/// Set up in `main` before the first frame, so synchronous reads work.
+final prefsServiceProvider = Provider<PrefsService>((ref) {
+  throw StateError('prefsServiceProvider must be overridden in main()');
+});
+
+/// On-device security: DB encryption key, PIN, biometric.
+final securityServiceProvider =
+    Provider<SecurityService>((ref) => SecurityService());
+
+/// The single database instance for the app's lifetime — encrypted at rest.
+/// The passphrase is resolved lazily from the keystore on first query.
 final databaseProvider = Provider<AppDatabase>((ref) {
-  final db = AppDatabase();
+  final security = ref.watch(securityServiceProvider);
+  final db = AppDatabase.encrypted(security.databasePassphrase);
   ref.onDispose(db.close);
   return db;
 });
+
+/// The chosen UI language, persisted via [PrefsService]. Changing it rebuilds
+/// every screen that reads [stringsProvider].
+final localeProvider =
+    StateNotifierProvider<LocaleController, AppLanguage>((ref) {
+  return LocaleController(ref.watch(prefsServiceProvider));
+});
+
+class LocaleController extends StateNotifier<AppLanguage> {
+  LocaleController(this._prefs) : super(_prefs.language);
+
+  final PrefsService _prefs;
+
+  Future<void> set(AppLanguage language) async {
+    state = language;
+    await _prefs.setLanguage(language);
+  }
+}
+
+/// Resolved strings for the current language. Screens read this.
+final stringsProvider =
+    Provider<AppStrings>((ref) => AppStrings.of(ref.watch(localeProvider)));
+
+/// App-lock state. `true` = locked (show the lock screen). Starts locked when
+/// the lock is enabled in preferences.
+final lockControllerProvider =
+    StateNotifierProvider<LockController, bool>((ref) {
+  return LockController(locked: ref.watch(prefsServiceProvider).lockEnabled);
+});
+
+class LockController extends StateNotifier<bool> {
+  LockController({required bool locked}) : super(locked);
+
+  void lock() => state = true;
+  void unlock() => state = false;
+}
 
 // ---------------------------------------------------------------------------
 // Reads — all streams.

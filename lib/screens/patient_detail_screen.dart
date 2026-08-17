@@ -17,6 +17,7 @@ class PatientDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final patientAsync = ref.watch(patientProvider(patientId));
     final screeningsAsync = ref.watch(screeningsProvider(patientId));
+    final s = ref.watch(stringsProvider);
 
     return patientAsync.when(
       loading: () =>
@@ -36,7 +37,7 @@ class PatientDetailScreen extends ConsumerWidget {
             actions: [
               IconButton(
                 icon: const Icon(Icons.edit),
-                tooltip: 'Edit patient',
+                tooltip: MaterialLocalizations.of(context).editButtonLabel,
                 onPressed: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(
                     builder: (_) => PatientFormScreen(existing: patient),
@@ -50,7 +51,7 @@ class PatientDetailScreen extends ConsumerWidget {
             children: [
               _PatientCard(patient: patient),
               const SizedBox(height: AppSpacing.md),
-              Text('Screenings',
+              Text(s.screenings,
                   style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: AppSpacing.sm),
               screeningsAsync.when(
@@ -63,7 +64,7 @@ class PatientDetailScreen extends ConsumerWidget {
                 error: (e, _) => Text('Error: $e'),
                 data: (screenings) {
                   if (screenings.isEmpty) {
-                    return const Text('No screenings yet. Add one below.');
+                    return Text(s.noScreeningsAddBelow);
                   }
                   return Column(
                     children: [
@@ -86,7 +87,7 @@ class PatientDetailScreen extends ConsumerWidget {
               ),
             ),
             icon: const Icon(Icons.add),
-            label: const Text('Add screening'),
+            label: Text(s.addScreening),
           ),
         );
       },
@@ -101,8 +102,9 @@ class _PatientCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final s = ref.watch(stringsProvider);
     final info = [
-      if (patient.age != null) '${patient.age} yrs',
+      if (patient.age != null) '${patient.age} ${s.years}',
       if (patient.sex != null && patient.sex!.isNotEmpty) patient.sex!,
     ].join(' · ');
     return Card(
@@ -120,17 +122,70 @@ class _PatientCard extends ConsumerWidget {
                   Expanded(child: Text(patient.phone)),
                   TextButton.icon(
                     icon: const Icon(Icons.call),
-                    label: const Text('Call'),
+                    label: Text(s.call),
                     onPressed: () =>
                         ref.read(launcherServiceProvider).dial(patient.phone),
                   ),
                 ],
               ),
+              const SizedBox(height: AppSpacing.xs),
+              _ReminderBar(patient: patient),
             ],
           ],
         ),
       ),
     );
+  }
+}
+
+/// Patient-facing reminders. The worker taps WhatsApp or SMS and a pre-filled
+/// message in the patient's language opens in that app — nothing is sent
+/// automatically, so the worker stays in control of the patient's data.
+class _ReminderBar extends ConsumerWidget {
+  const _ReminderBar({required this.patient});
+
+  final Patient patient;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = ref.watch(stringsProvider);
+    return Row(
+      children: [
+        Expanded(
+          child: OutlinedButton.icon(
+            icon: const Icon(Icons.chat_outlined),
+            label: const Text('WhatsApp'),
+            onPressed: () => _remind(ref, viaWhatsApp: true),
+          ),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(
+          child: OutlinedButton.icon(
+            icon: const Icon(Icons.sms_outlined),
+            label: Text(s.remindPatient),
+            onPressed: () => _remind(ref, viaWhatsApp: false),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _remind(WidgetRef ref, {required bool viaWhatsApp}) async {
+    final s = ref.read(stringsProvider);
+    final launcher = ref.read(launcherServiceProvider);
+    // Use the most recent screening's referral site, if any, for the message.
+    final screenings = ref.read(screeningsProvider(patient.id)).valueOrNull;
+    final site = screenings
+        ?.map((sc) => sc.referralSite)
+        .firstWhere((v) => v != null && v.isNotEmpty, orElse: () => null);
+    final message = site == null
+        ? s.reminderNoSite(name: patient.name)
+        : s.reminderWithSite(name: patient.name, site: site);
+    if (viaWhatsApp) {
+      await launcher.whatsApp(patient.phone, message);
+    } else {
+      await launcher.sms(patient.phone, message);
+    }
   }
 }
 
@@ -142,6 +197,7 @@ class _ScreeningCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final s = ref.watch(stringsProvider);
     final next = screening.referralStatus.nextStates;
     final site = screening.referralSite;
     return Card(
@@ -154,14 +210,14 @@ class _ScreeningCard extends ConsumerWidget {
               children: [
                 Expanded(
                   child: Text(
-                    _resultText(screening.result),
+                    resultLabel(s, screening.result),
                     style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
                 ),
                 _ReferralChip(status: screening.referralStatus),
                 _ReportMenu(
-                  onSelected: (action) =>
-                      _report(context, ref, action),
+                  strings: s,
+                  onSelected: (action) => _report(context, ref, action),
                 ),
               ],
             ),
@@ -174,7 +230,7 @@ class _ScreeningCard extends ConsumerWidget {
                   Expanded(child: Text(site)),
                   TextButton.icon(
                     icon: const Icon(Icons.directions),
-                    label: const Text('Navigate'),
+                    label: Text(s.navigate),
                     onPressed: () =>
                         ref.read(launcherServiceProvider).openMaps(site),
                   ),
@@ -189,7 +245,7 @@ class _ScreeningCard extends ConsumerWidget {
                   for (final to in next)
                     OutlinedButton(
                       onPressed: () => _advance(context, ref, to),
-                      child: Text('Mark ${to.name}'),
+                      child: Text(s.markStatus(referralStatusLabel(s, to))),
                     ),
                 ],
               ),
@@ -257,31 +313,32 @@ class _ScreeningCard extends ConsumerWidget {
 enum _ReportAction { share, print }
 
 class _ReportMenu extends StatelessWidget {
-  const _ReportMenu({required this.onSelected});
+  const _ReportMenu({required this.strings, required this.onSelected});
 
+  final AppStrings strings;
   final ValueChanged<_ReportAction> onSelected;
 
   @override
   Widget build(BuildContext context) {
     return PopupMenuButton<_ReportAction>(
       icon: const Icon(Icons.description_outlined),
-      tooltip: 'Screening report',
+      tooltip: strings.screeningReport,
       onSelected: onSelected,
-      itemBuilder: (context) => const [
+      itemBuilder: (context) => [
         PopupMenuItem(
           value: _ReportAction.share,
           child: ListTile(
             contentPadding: EdgeInsets.zero,
-            leading: Icon(Icons.ios_share),
-            title: Text('Share report'),
+            leading: const Icon(Icons.ios_share),
+            title: Text(strings.shareReport),
           ),
         ),
         PopupMenuItem(
           value: _ReportAction.print,
           child: ListTile(
             contentPadding: EdgeInsets.zero,
-            leading: Icon(Icons.print_outlined),
-            title: Text('Print report'),
+            leading: const Icon(Icons.print_outlined),
+            title: Text(strings.printReport),
           ),
         ),
       ],
@@ -289,23 +346,24 @@ class _ReportMenu extends StatelessWidget {
   }
 }
 
-class _ReferralChip extends StatelessWidget {
+class _ReferralChip extends ConsumerWidget {
   const _ReferralChip({required this.status});
 
   final ReferralStatus status;
 
   @override
-  Widget build(BuildContext context) {
-    final (label, color) = switch (status) {
-      ReferralStatus.none => ('No referral', Colors.grey),
-      ReferralStatus.referred => ('Referred', AppColors.pending),
-      ReferralStatus.booked => ('Booked', AppColors.pending),
-      ReferralStatus.attended => ('Attended', AppColors.reached),
-      ReferralStatus.treated => ('Treated', AppColors.reached),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = ref.watch(stringsProvider);
+    final color = switch (status) {
+      ReferralStatus.none => Colors.grey,
+      ReferralStatus.referred => AppColors.pending,
+      ReferralStatus.booked => AppColors.pending,
+      ReferralStatus.attended => AppColors.reached,
+      ReferralStatus.treated => AppColors.reached,
     };
     return Chip(
       label: Text(
-        label,
+        referralStatusLabel(s, status),
         style: const TextStyle(color: Colors.white, fontSize: 12),
       ),
       backgroundColor: color,
@@ -314,12 +372,6 @@ class _ReferralChip extends StatelessWidget {
     );
   }
 }
-
-String _resultText(ScreeningResult r) => switch (r) {
-      ScreeningResult.referable => 'Referable',
-      ScreeningResult.notReferable => 'Not referable',
-      ScreeningResult.ungradable => 'Ungradable',
-    };
 
 String _formatDate(DateTime d) =>
     '${d.day.toString().padLeft(2, '0')}/'
