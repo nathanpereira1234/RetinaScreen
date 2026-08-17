@@ -48,15 +48,13 @@ final prefsServiceProvider = Provider<PrefsService>((ref) {
   throw StateError('prefsServiceProvider must be overridden in main()');
 });
 
-/// On-device security: DB encryption key, PIN, biometric.
+/// On-device security for the app lock: PIN and biometric.
 final securityServiceProvider =
     Provider<SecurityService>((ref) => SecurityService());
 
-/// The single database instance for the app's lifetime — encrypted at rest.
-/// The passphrase is resolved lazily from the keystore on first query.
+/// The single database instance for the app's lifetime.
 final databaseProvider = Provider<AppDatabase>((ref) {
-  final security = ref.watch(securityServiceProvider);
-  final db = AppDatabase.encrypted(security.databasePassphrase);
+  final db = AppDatabase();
   ref.onDispose(db.close);
   return db;
 });
