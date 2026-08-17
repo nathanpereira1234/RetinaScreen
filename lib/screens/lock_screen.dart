@@ -169,7 +169,7 @@ class _PinField extends StatelessWidget {
       keyboardType: TextInputType.number,
       inputFormatters: [
         FilteringTextInputFormatter.digitsOnly,
-        const LengthLimitingTextInputFormatter(8),
+        LengthLimitingTextInputFormatter(8),
       ],
       textAlign: TextAlign.center,
       style: const TextStyle(color: Colors.white, letterSpacing: 8),

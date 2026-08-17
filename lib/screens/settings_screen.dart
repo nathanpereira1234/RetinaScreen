@@ -25,7 +25,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       appBar: AppBar(title: Text(s.settings)),
       body: ListView(
         children: [
-          _SectionHeader(s.language),
+          _SectionHeader(s.languageLabel),
           for (final lang in AppLanguage.values)
             ListTile(
               title: Text(lang.label),
@@ -159,7 +159,7 @@ class _SetPinDialogState extends State<_SetPinDialog> {
         keyboardType: TextInputType.number,
         inputFormatters: [
           FilteringTextInputFormatter.digitsOnly,
-          const LengthLimitingTextInputFormatter(8),
+          LengthLimitingTextInputFormatter(8),
         ],
         decoration: InputDecoration(labelText: label),
       );
