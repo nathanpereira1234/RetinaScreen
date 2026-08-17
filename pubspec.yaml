@@ -57,7 +57,8 @@ dependencies:
   url_launcher: ^6.3.0
 
   # Formatting (dates in the UI). No network, no PII leaves the device.
-  intl: ^0.19.0
+  # Pinned to 0.20.x to match the version flutter_localizations requires.
+  intl: ^0.20.2
 
   # Screening report generation + printing. The PDF is built ON-DEVICE from
   # data already on the phone; nothing is uploaded. `printing` hands the bytes
