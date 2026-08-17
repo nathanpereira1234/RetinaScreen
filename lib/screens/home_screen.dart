@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/app_providers.dart';
 import '../theme/app_theme.dart';
+import 'metrics_screen.dart';
 import 'patient_detail_screen.dart';
 import 'patient_form_screen.dart';
 import 'patient_list_screen.dart';
@@ -23,6 +24,15 @@ class HomeScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('RetinaScreen'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.insights_outlined),
+            tooltip: 'Program metrics',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const MetricsScreen(),
+              ),
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.people_outline),
             tooltip: 'All patients',

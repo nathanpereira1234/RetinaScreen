@@ -67,7 +67,8 @@ class PatientDetailScreen extends ConsumerWidget {
                   }
                   return Column(
                     children: [
-                      for (final s in screenings) _ScreeningCard(screening: s),
+                      for (final s in screenings)
+                        _ScreeningCard(patient: patient, screening: s),
                     ],
                   );
                 },
@@ -134,8 +135,9 @@ class _PatientCard extends ConsumerWidget {
 }
 
 class _ScreeningCard extends ConsumerWidget {
-  const _ScreeningCard({required this.screening});
+  const _ScreeningCard({required this.patient, required this.screening});
 
+  final Patient patient;
   final Screening screening;
 
   @override
@@ -157,6 +159,10 @@ class _ScreeningCard extends ConsumerWidget {
                   ),
                 ),
                 _ReferralChip(status: screening.referralStatus),
+                _ReportMenu(
+                  onSelected: (action) =>
+                      _report(context, ref, action),
+                ),
               ],
             ),
             const SizedBox(height: AppSpacing.xs),
@@ -194,6 +200,40 @@ class _ScreeningCard extends ConsumerWidget {
     );
   }
 
+  /// Build the screening report and either share it (system share sheet) or
+  /// send it to a printer. The PDF is generated on-device from data already on
+  /// the phone — nothing is uploaded.
+  Future<void> _report(
+    BuildContext context,
+    WidgetRef ref,
+    _ReportAction action,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final history =
+          await ref.read(referralHistoryProvider(screening.id).future);
+      final service = ref.read(reportServiceProvider);
+      switch (action) {
+        case _ReportAction.share:
+          await service.share(
+            patient: patient,
+            screening: screening,
+            history: history,
+          );
+        case _ReportAction.print:
+          await service.printOut(
+            patient: patient,
+            screening: screening,
+            history: history,
+          );
+      }
+    } catch (e) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('Could not create report: $e')),
+      );
+    }
+  }
+
   Future<void> _advance(
     BuildContext context,
     WidgetRef ref,
@@ -211,6 +251,41 @@ class _ScreeningCard extends ConsumerWidget {
     } on InvalidReferralTransition catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(e.toString())));
     }
+  }
+}
+
+enum _ReportAction { share, print }
+
+class _ReportMenu extends StatelessWidget {
+  const _ReportMenu({required this.onSelected});
+
+  final ValueChanged<_ReportAction> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton<_ReportAction>(
+      icon: const Icon(Icons.description_outlined),
+      tooltip: 'Screening report',
+      onSelected: onSelected,
+      itemBuilder: (context) => const [
+        PopupMenuItem(
+          value: _ReportAction.share,
+          child: ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.ios_share),
+            title: Text('Share report'),
+          ),
+        ),
+        PopupMenuItem(
+          value: _ReportAction.print,
+          child: ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.print_outlined),
+            title: Text('Print report'),
+          ),
+        ),
+      ],
+    );
   }
 }
 
