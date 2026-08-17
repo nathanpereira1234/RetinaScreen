@@ -87,12 +87,12 @@ class ReportService {
           pw.SizedBox(height: 16),
           pw.Text(
             'Screening report',
-            style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold),
+            style: const pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold),
           ),
           pw.SizedBox(height: 4),
           pw.Text(
             'Generated ${dateTimeFmt.format(DateTime.now())}',
-            style: pw.TextStyle(fontSize: 9, color: PdfColors.grey600),
+            style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey600),
           ),
           pw.SizedBox(height: 16),
           _sectionTitle('Patient'),
@@ -122,12 +122,12 @@ class ReportService {
           _sectionTitle('What this means'),
           pw.Text(
             _resultExplanation(screening.result),
-            style: pw.TextStyle(fontSize: 11),
+            style: const pw.TextStyle(fontSize: 11),
           ),
           pw.SizedBox(height: 8),
           pw.Text(
             _nextSteps(screening.result, screening.referralStatus),
-            style: pw.TextStyle(fontSize: 11),
+            style: const pw.TextStyle(fontSize: 11),
           ),
           if (history.isNotEmpty) ...[
             pw.SizedBox(height: 16),
@@ -149,13 +149,13 @@ class ReportService {
           pw.Text(
             program.name,
             style:
-                pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold),
+                const pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold),
           ),
           if (program.subtitle.isNotEmpty)
             pw.Text(
               program.subtitle,
               style:
-                  pw.TextStyle(fontSize: 10, color: PdfColors.grey700),
+                  const pw.TextStyle(fontSize: 10, color: PdfColors.grey700),
             ),
           pw.Divider(color: PdfColors.grey400),
         ],
@@ -165,7 +165,7 @@ class ReportService {
         padding: const pw.EdgeInsets.only(bottom: 6),
         child: pw.Text(
           text,
-          style: pw.TextStyle(
+          style: const pw.TextStyle(
             fontSize: 12,
             fontWeight: pw.FontWeight.bold,
             color: PdfColors.grey800,
@@ -175,8 +175,8 @@ class ReportService {
 
   static pw.Widget _kvTable(Map<String, String> rows) => pw.Table(
         columnWidths: {
-          0: pw.FixedColumnWidth(120),
-          1: pw.FlexColumnWidth(),
+          0: const pw.FixedColumnWidth(120),
+          1: const pw.FlexColumnWidth(),
         },
         children: [
           for (final entry in rows.entries)
@@ -186,7 +186,7 @@ class ReportService {
                   padding: const pw.EdgeInsets.symmetric(vertical: 3),
                   child: pw.Text(
                     entry.key,
-                    style: pw.TextStyle(
+                    style: const pw.TextStyle(
                       fontSize: 11,
                       color: PdfColors.grey700,
                     ),
@@ -196,7 +196,7 @@ class ReportService {
                   padding: const pw.EdgeInsets.symmetric(vertical: 3),
                   child: pw.Text(
                     entry.value,
-                    style: pw.TextStyle(fontSize: 11),
+                    style: const pw.TextStyle(fontSize: 11),
                   ),
                 ),
               ],
@@ -213,7 +213,7 @@ class ReportService {
         ),
         child: pw.Text(
           label,
-          style: pw.TextStyle(
+          style: const pw.TextStyle(
             color: PdfColors.white,
             fontSize: 13,
             fontWeight: pw.FontWeight.bold,
@@ -235,7 +235,7 @@ class ReportService {
                 '• ${fmt.format(e.occurredAt)} — '
                 '${e.fromStatus == null ? 'recorded' : '${_statusLabel(e.fromStatus!)} -> ${_statusLabel(e.toStatus)}'}'
                 '${e.note != null && e.note!.isNotEmpty ? ' (${e.note})' : ''}',
-                style: pw.TextStyle(fontSize: 10),
+                style: const pw.TextStyle(fontSize: 10),
               ),
             ),
         ],
@@ -248,12 +248,12 @@ class ReportService {
           pw.Divider(color: PdfColors.grey300),
           pw.Text(
             program.disclaimer,
-            style: pw.TextStyle(fontSize: 8, color: PdfColors.grey600),
+            style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600),
           ),
           pw.SizedBox(height: 2),
           pw.Text(
             'Page ${context.pageNumber} of ${context.pagesCount}',
-            style: pw.TextStyle(fontSize: 8, color: PdfColors.grey500),
+            style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey500),
           ),
         ],
       );
