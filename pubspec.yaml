@@ -45,9 +45,12 @@ dependencies:
   flutter_riverpod: ^2.5.1
 
   # Offline-first source of truth. Drift = typed SQLite with reactive streams.
+  # NOTE: we do NOT use sqlite3_flutter_libs / drift_flutter here — the native
+  # SQLite library ships via sqlcipher_flutter_libs (encryption at rest). The
+  # two provide the same native lib under one namespace and cannot coexist, so
+  # SQLCipher is the sole provider. The DB is opened in data/database.dart with
+  # a NativeDatabase over path_provider (AppDatabase.encrypted).
   drift: ^2.20.0
-  drift_flutter: ^0.2.0
-  sqlite3_flutter_libs: ^0.5.24
 
   # Local follow-up reminders (A15/A16). Timezone-aware scheduling.
   flutter_local_notifications: ^17.2.3

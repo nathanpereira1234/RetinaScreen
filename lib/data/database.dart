@@ -2,7 +2,6 @@ import 'dart:io';
 
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
-import 'package:drift_flutter/drift_flutter.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:sqlcipher_flutter_libs/sqlcipher_flutter_libs.dart';
@@ -119,9 +118,8 @@ QueryExecutor _openEncrypted(Future<String> Function() passphrase) {
 @DriftDatabase(tables: [Patients, Screenings, ReferralEvents])
 class AppDatabase extends _$AppDatabase {
   /// Test / custom-executor constructor. Tests pass an in-memory executor:
-  /// `AppDatabase(NativeDatabase.memory())`.
-  AppDatabase([QueryExecutor? executor])
-      : super(executor ?? driftDatabase(name: 'retinascreen'));
+  /// `AppDatabase(NativeDatabase.memory())`. Production uses [AppDatabase.encrypted].
+  AppDatabase(QueryExecutor executor) : super(executor);
 
   /// Production constructor: opens the encrypted on-device file. [passphrase]
   /// is resolved lazily (from secure storage) on first query.
