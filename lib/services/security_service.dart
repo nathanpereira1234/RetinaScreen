@@ -5,18 +5,12 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:local_auth/local_auth.dart';
 
-/// On-device security: the database encryption key, the app-lock PIN, and
-/// biometric unlock.
+/// On-device security for the app lock: the PIN and biometric unlock.
 ///
-/// Everything here stays on the device. The database key is a per-install
-/// random value kept in the platform keystore/keychain (via
-/// [FlutterSecureStorage]); it is never derived from the PIN, so unlocking is
-/// instant and losing the PIN does not lose the data. The PIN is stored only as
-/// a salted SHA-256 hash — the plaintext PIN is never persisted.
-///
-/// The key protects data *at rest*: a database file copied off a stolen device
-/// is unreadable without the keystore entry. The PIN/biometric lock is a
-/// separate access gate on the running app (see `LockController`).
+/// Everything here stays on the device. The PIN is stored only as a salted
+/// SHA-256 hash in the platform keystore/keychain (via [FlutterSecureStorage])
+/// — the plaintext PIN is never persisted — and verified in length-constant
+/// time. The lock is an access gate on the running app (see `LockController`).
 class SecurityService {
   SecurityService({
     FlutterSecureStorage? storage,
@@ -30,21 +24,8 @@ class SecurityService {
   final FlutterSecureStorage _storage;
   final LocalAuthentication _localAuth;
 
-  static const _kDbKey = 'db_passphrase';
   static const _kPinHash = 'pin_hash';
   static const _kPinSalt = 'pin_salt';
-
-  // --- Database encryption key ---
-
-  /// The SQLCipher passphrase for this install, creating it on first use. A
-  /// 256-bit random value, base64-encoded.
-  Future<String> databasePassphrase() async {
-    final existing = await _storage.read(key: _kDbKey);
-    if (existing != null && existing.isNotEmpty) return existing;
-    final key = base64UrlEncode(_randomBytes(32));
-    await _storage.write(key: _kDbKey, value: key);
-    return key;
-  }
 
   // --- App-lock PIN ---
 

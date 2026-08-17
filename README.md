@@ -133,12 +133,13 @@ New third-party packages back these: `pdf` + `printing` (report), `share_plus`
 A second layer of program-grade features, all still **on-device / offline** and
 still inside the "does not diagnose" line.
 
-**Encryption at rest + app lock.** The SQLite file is opened through SQLCipher,
-keyed with a per-install random key in the platform keystore
-(`SecurityService`), so a stolen device file is unreadable. An optional PIN /
-biometric lock (Settings → Security) gates the running app and re-engages when
-the app is backgrounded. Full setup — including the one Android `MainActivity`
-change biometric needs — is in **docs/SECURITY.md**.
+**App lock (PIN + biometric).** An optional PIN / biometric lock (Settings →
+Security) gates the running app and re-engages when the app is backgrounded.
+The PIN is stored only as a salted SHA-256 hash in the platform keystore
+(`SecurityService`). Full setup — including the one Android `MainActivity`
+change biometric needs — is in **docs/SECURITY.md**. (Encryption at rest is
+deferred: its only library, `sqlcipher_flutter_libs`, is EOL and collides with
+`sqlite3_flutter_libs`; it will return on the maintained `sqlite3` 3.x path.)
 
 **Multi-language UI.** `lib/l10n/strings.dart` holds the app's strings as one
 map per language (English, Hindi, Tamil) — no codegen, English fallback for any
@@ -158,9 +159,9 @@ no backend. This nudges *the patient*, directly targeting the attendance KPI.
 referable → referred → reached clinic → treated) and a 6-month trend, in pure
 Flutter (no chart dependency).
 
-New packages: `sqlcipher_flutter_libs`, `flutter_secure_storage`, `sqlite3`,
-`local_auth`, `crypto`, `shared_preferences`, `path`, `flutter_localizations`.
-Run `flutter pub get` after pulling this branch.
+New packages: `flutter_secure_storage`, `local_auth`, `crypto`,
+`shared_preferences`, `flutter_localizations`. Run `flutter pub get` after
+pulling this branch.
 
 ## Things that are load-bearing
 
