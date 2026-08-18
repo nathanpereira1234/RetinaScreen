@@ -101,7 +101,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
           ],
           const Divider(),
-          _SectionHeader('On-device AI (Assistant)'),
+          const _SectionHeader('On-device AI (Assistant)'),
           ListTile(
             leading: Icon(
               prefs.gemmaInstalled
