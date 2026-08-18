@@ -60,8 +60,18 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
       _input.clear();
       _busy = true;
     });
-    final answer =
-        await ref.read(assistantServiceProvider).ask(s, widget.result, q);
+    // RAG grounding: retrieve relevant curated passages for the question.
+    String? context;
+    if (ref.read(ragReadyProvider).valueOrNull ?? false) {
+      final lang = ref.read(localeProvider);
+      final chunks = ref.read(ragServiceProvider).retrieve(q, lang: lang.code);
+      if (chunks.isNotEmpty) {
+        context = chunks.map((c) => c.text).join('\n\n');
+      }
+    }
+    final answer = await ref
+        .read(assistantServiceProvider)
+        .ask(s, widget.result, q, context: context);
     if (mounted) {
       setState(() {
         _messages.add(_Msg(answer, fromUser: false));
@@ -80,6 +90,9 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
     final s = ref.watch(stringsProvider);
     final onDevice =
         ref.watch(assistantServiceProvider).engine == AssistantEngine.onDevice;
+    // Kick off RAG store init so grounding is ready by the time a question is
+    // asked (result ignored here; retrieval is read lazily in _send).
+    ref.watch(ragReadyProvider);
 
     return Scaffold(
       appBar: AppBar(

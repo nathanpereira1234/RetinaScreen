@@ -79,12 +79,22 @@ class GemmaAssistant implements AssistantService {
       );
 
   @override
-  Future<String> ask(AppStrings s, ScreeningResult result, String question) =>
-      _run(
-        '${_system(s.language)}\n\nThe recorded result is '
-        '"${resultLabel(s, result)}". The patient asks: "$question". '
-        'Answer within scope.',
-      );
+  Future<String> ask(
+    AppStrings s,
+    ScreeningResult result,
+    String question, {
+    String? context,
+  }) {
+    final grounding = (context != null && context.trim().isNotEmpty)
+        ? 'Use ONLY the following approved information; if it does not cover the '
+            'question, say to ask the health worker.\n"""\n${context.trim()}\n"""\n\n'
+        : '';
+    return _run(
+      '${_system(s.language)}\n\n$grounding'
+      'The recorded result is "${resultLabel(s, result)}". '
+      'The patient asks: "$question". Answer within scope.',
+    );
+  }
 
   Future<String> _run(String prompt) async {
     try {

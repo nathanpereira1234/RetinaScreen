@@ -28,14 +28,15 @@ abstract class AssistantService {
   /// A warm, plain-language explanation of [result] in [strings]' language.
   Future<String> explainResult(AppStrings strings, ScreeningResult result);
 
-  /// Answer a free-form question, scoped to eye-screening follow-up. The
-  /// template engine can't reason over open text, so it returns the standard
-  /// explanation plus a pointer; the LLM engine answers properly.
+  /// Answer a free-form question, scoped to eye-screening follow-up. [context]
+  /// is retrieved knowledge-base passages (RAG grounding), when available: the
+  /// LLM engine answers from it; the template engine returns it directly.
   Future<String> ask(
     AppStrings strings,
     ScreeningResult result,
-    String question,
-  );
+    String question, {
+    String? context,
+  });
 }
 
 /// Offline, deterministic assistant. Reuses the localised result copy the app
@@ -58,7 +59,12 @@ class TemplateAssistant implements AssistantService {
   Future<String> ask(
     AppStrings strings,
     ScreeningResult result,
-    String question,
-  ) async =>
-      '${spokenResult(strings, result)}\n\n${strings.templateModeNote}';
+    String question, {
+    String? context,
+  }) async {
+    // With RAG grounding, the retrieved passage IS a useful answer even without
+    // a language model. Without it, fall back to the standard explanation.
+    if (context != null && context.trim().isNotEmpty) return context.trim();
+    return '${spokenResult(strings, result)}\n\n${strings.templateModeNote}';
+  }
 }
