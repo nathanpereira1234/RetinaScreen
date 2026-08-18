@@ -65,17 +65,25 @@ class HomeScreen extends ConsumerWidget {
           dueAsync.when(
             loading: () => const _Loading(),
             error: (e, _) => Text('Error: $e'),
-            data: (items) => items.isEmpty
-                ? _EmptyLine(s.noPendingFollowUps)
-                : Column(
-                    children: [
-                      for (final entry in items)
-                        _DashboardTile(
-                          entry: entry,
-                          subtitle: _followUpSubtitle(s, entry),
-                        ),
-                    ],
-                  ),
+            data: (items) {
+              if (items.isEmpty) return _EmptyLine(s.noPendingFollowUps);
+              // AI triage: chase the patients least likely to attend first.
+              final sorted = [...items]..sort((a, b) =>
+                  AttendanceAi.outreachPriority(b.screening)
+                      .compareTo(AttendanceAi.outreachPriority(a.screening)));
+              return Column(
+                children: [
+                  for (final entry in sorted)
+                    _DashboardTile(
+                      entry: entry,
+                      subtitle: _followUpSubtitle(s, entry),
+                      priority: AttendanceAi.band(
+                        AttendanceAi.outreachPriority(entry.screening),
+                      ),
+                    ),
+                ],
+              );
+            },
           ),
           const SizedBox(height: AppSpacing.lg),
           _SectionTitle(s.recentlyScreened),
@@ -158,13 +166,21 @@ class _PendingSummary extends StatelessWidget {
 }
 
 class _DashboardTile extends StatelessWidget {
-  const _DashboardTile({required this.entry, required this.subtitle});
+  const _DashboardTile({
+    required this.entry,
+    required this.subtitle,
+    this.priority,
+  });
 
   final PatientScreening entry;
   final String subtitle;
 
+  /// When set, shows an AI outreach-priority dot (higher = chase sooner).
+  final OutreachBand? priority;
+
   @override
   Widget build(BuildContext context) {
+    final band = priority;
     return Card(
       child: ListTile(
         leading: CircleAvatar(
@@ -181,12 +197,41 @@ class _DashboardTile extends StatelessWidget {
           style: const TextStyle(fontWeight: FontWeight.w600),
         ),
         subtitle: Text(subtitle),
-        trailing: const Icon(Icons.chevron_right),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (band != null) _PriorityDot(band: band),
+            const Icon(Icons.chevron_right),
+          ],
+        ),
         onTap: () => Navigator.of(context).push(
           MaterialPageRoute<void>(
             builder: (_) => PatientDetailScreen(patientId: entry.patient.id),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _PriorityDot extends StatelessWidget {
+  const _PriorityDot({required this.band});
+
+  final OutreachBand band;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = switch (band) {
+      OutreachBand.high => AppColors.referable,
+      OutreachBand.medium => AppColors.ungradable,
+      OutreachBand.low => AppColors.reached,
+    };
+    return Padding(
+      padding: const EdgeInsets.only(right: AppSpacing.sm),
+      child: Container(
+        width: 12,
+        height: 12,
+        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
       ),
     );
   }

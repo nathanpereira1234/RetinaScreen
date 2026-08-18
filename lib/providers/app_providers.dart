@@ -49,6 +49,10 @@ export '../services/reminder_service.dart' show ReminderService;
 export '../services/report_service.dart' show ReportService, ReportProgram;
 export '../services/retinopathy_grader.dart'
     show RetinopathyGrader, RetinopathyPrediction, DrGrade;
+export '../services/attendance_ai.dart' show AttendanceAi, OutreachBand;
+export '../services/anomaly_detector.dart'
+    show AnomalyDetector, SiteAnomaly, AnomalyKind;
+export '../services/fundus_ai.dart' show FundusAi;
 
 /// Set up in `main` before the first frame, so synchronous reads work.
 final prefsServiceProvider = Provider<PrefsService>((ref) {

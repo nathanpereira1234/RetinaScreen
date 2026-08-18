@@ -159,6 +159,9 @@ class AppStrings {
   String get immediately => _get('immediately');
   String get activityLog => _get('activityLog');
   String get noActivityYet => _get('noActivityYet');
+  String get flaggedSites => _get('flaggedSites');
+  String get highUngradableRate => _get('highUngradableRate');
+  String get lowAttendanceRate => _get('lowAttendanceRate');
 
   // Onboarding
   String get getStarted => _get('getStarted');
@@ -315,6 +318,9 @@ const Map<String, String> _en = {
   'immediately': 'Immediately',
   'activityLog': 'Activity log',
   'noActivityYet': 'No activity yet.',
+  'flaggedSites': 'Flagged sites (AI)',
+  'highUngradableRate': 'high ungradable',
+  'lowAttendanceRate': 'low attendance',
 };
 
 const Map<String, String> _hi = {
@@ -440,6 +446,9 @@ const Map<String, String> _hi = {
   'immediately': 'तुरंत',
   'activityLog': 'गतिविधि लॉग',
   'noActivityYet': 'अभी कोई गतिविधि नहीं।',
+  'flaggedSites': 'चिह्नित साइटें (AI)',
+  'highUngradableRate': 'अधिक अयोग्य',
+  'lowAttendanceRate': 'कम उपस्थिति',
 };
 
 const Map<String, String> _ta = {
@@ -568,6 +577,9 @@ const Map<String, String> _ta = {
   'immediately': 'உடனடியாக',
   'activityLog': 'செயல்பாட்டு பதிவு',
   'noActivityYet': 'இதுவரை செயல்பாடு இல்லை.',
+  'flaggedSites': 'குறிக்கப்பட்ட தளங்கள் (AI)',
+  'highUngradableRate': 'அதிக மதிப்பிடமுடியாதவை',
+  'lowAttendanceRate': 'குறைந்த வருகை',
 };
 
 const Map<AppLanguage, Map<String, String>> _tables = {

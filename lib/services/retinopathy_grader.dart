@@ -72,8 +72,49 @@ class RetinopathyGrader {
 
     final resized =
         img.copyResize(decoded, width: _inputSize, height: _inputSize);
+    return RetinopathyPrediction.fromScores(_runResized(resized, interpreter));
+  }
 
-    // Build the [1, H, W, 3] float input tensor.
+  /// Grade with **test-time augmentation**: run the model on the image and its
+  /// horizontal flip and average the class probabilities. Averaging cancels
+  /// per-view noise, so the suggestion (and its confidence) is steadier than a
+  /// single pass. Still suggestion-only. Returns null when no model / bad bytes.
+  Future<RetinopathyPrediction?> gradeEnsemble(Uint8List imageBytes) async {
+    await load();
+    final interpreter = _interpreter;
+    if (interpreter == null) return null;
+    img.Image? decoded;
+    try {
+      decoded = img.decodeImage(imageBytes);
+    } catch (_) {
+      return null;
+    }
+    if (decoded == null) return null;
+
+    final views = <img.Image>[
+      decoded,
+      img.flipHorizontal(img.Image.from(decoded)),
+    ];
+    final probs = <List<double>>[];
+    for (final v in views) {
+      final resized = img.copyResize(v, width: _inputSize, height: _inputSize);
+      probs.add(
+        RetinopathyPrediction.fromScores(_runResized(resized, interpreter))
+            .scores,
+      );
+    }
+    final avg = List<double>.filled(_numClasses, 0);
+    for (final p in probs) {
+      for (var i = 0; i < _numClasses; i++) {
+        avg[i] += p[i] / probs.length;
+      }
+    }
+    return RetinopathyPrediction.fromScores(avg);
+  }
+
+  /// Run the interpreter on an already-resized image, returning the raw output
+  /// row. Shared by [grade] and [gradeEnsemble].
+  List<double> _runResized(img.Image resized, Interpreter interpreter) {
     final input = List.generate(
       1,
       (_) => List.generate(
@@ -88,13 +129,10 @@ class RetinopathyGrader {
         }),
       ),
     );
-
-    // Output: [1, numClasses] class scores.
     final output =
         List.generate(1, (_) => List<double>.filled(_numClasses, 0));
     interpreter.run(input, output);
-
-    return RetinopathyPrediction.fromScores(output.first);
+    return output.first;
   }
 
   void dispose() {
@@ -150,6 +188,18 @@ class RetinopathyPrediction {
   /// Confidence below which we don't trust the grade and suggest re-screening
   /// instead of a possibly-false reassurance.
   static const double _minConfidence = 0.5;
+
+  /// Whether the model is confident enough for its grade to be shown as a
+  /// suggestion. Below this the UI should ask for manual grading rather than
+  /// nudge toward a possibly-wrong answer.
+  bool get isConfident => confidence >= _minConfidence;
+
+  /// The runner-up grade (second most probable) — useful context for the human.
+  DrGrade get runnerUp {
+    final order = List.generate(scores.length, (i) => i)
+      ..sort((a, b) => scores[b].compareTo(scores[a]));
+    return DrGrade.values[order.length > 1 ? order[1] : order[0]];
+  }
 
   /// Map the fine-grained grade to the app's clinical-action enum.
   ///
