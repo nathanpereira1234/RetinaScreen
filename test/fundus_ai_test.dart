@@ -24,10 +24,22 @@ void main() {
     expect(FundusAi.looksDuplicate(h1, h2), isTrue);
   });
 
-  test('a shifted image differs from the original', () {
+  img.Image verticalSplit() {
+    final image = img.Image(width: 64, height: 64);
+    for (var y = 0; y < 64; y++) {
+      for (var x = 0; x < 64; x++) {
+        final v = x < 32 ? 230 : 15;
+        image.setPixelRgb(x, y, v, v, v);
+      }
+    }
+    return image;
+  }
+
+  test('a clearly different image has a different hash', () {
     final h1 = FundusAi.perceptualHash(checkerboard(0));
-    final h2 = FundusAi.perceptualHash(checkerboard(4));
-    expect(FundusAi.hamming(h1, h2), greaterThan(0));
+    final h2 = FundusAi.perceptualHash(verticalSplit());
+    expect(FundusAi.hamming(h1, h2), greaterThan(FundusAi.duplicateThreshold));
+    expect(FundusAi.looksDuplicate(h1, h2), isFalse);
   });
 
   test('enhance returns an image of the requested size', () {
