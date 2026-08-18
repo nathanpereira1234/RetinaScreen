@@ -1,83 +1,61 @@
-import 'package:objectbox/objectbox.dart';
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
-
-import '../objectbox.g.dart';
 import 'embedder.dart';
-import 'kb_chunk.dart';
 import 'knowledge_base.dart';
 
 /// Retrieval-augmented grounding for the assistant.
 ///
-/// Opens a small ObjectBox vector store (separate from the Drift patient DB),
-/// seeds it from the curated [knowledgeBase] on first run, and answers
-/// [retrieve] with the nearest passages via ObjectBox's on-device HNSW index.
+/// The knowledge base is a small, fixed, curated list, so the "vector store" is
+/// simply the embeddings held in memory: [init] embeds every passage once, and
+/// [retrieve] does a brute-force cosine top-k. At a few-hundred-passage corpus
+/// this is sub-millisecond and needs no database, no native plugin, and no
+/// codegen — deliberately chosen after ObjectBox's generator pulled in an
+/// analyzer incompatible with Drift's. A real vector DB (ObjectBox HNSW) is the
+/// documented upgrade for a large corpus — see docs/RAG.md.
 ///
-/// Everything degrades gracefully: if the store can't open (unsupported device,
-/// tests), [isReady] is false and [retrieve] returns nothing — the assistant
-/// then answers without grounding rather than crashing.
+/// Non-negotiable: the corpus is curated non-diagnostic content, so grounding
+/// keeps the assistant's answers inside vetted material.
 class RagService {
   RagService([this.embedder = const LexicalEmbedder()]);
 
   final Embedder embedder;
+  final List<_Indexed> _index = [];
+  bool _ready = false;
 
-  Store? _store;
-  Box<KbChunk>? _box;
-  bool _tried = false;
-
-  bool get isReady => _box != null;
+  bool get isReady => _ready;
 
   Future<void> init() async {
-    if (_tried) return;
-    _tried = true;
-    try {
-      final dir = await getApplicationDocumentsDirectory();
-      _store = await openStore(directory: p.join(dir.path, 'kb-vectors'));
-      final box = _store!.box<KbChunk>();
-      _box = box;
-      if (box.isEmpty()) _seed(box);
-    } catch (_) {
-      _store = null;
-      _box = null;
+    if (_ready) return;
+    for (final e in knowledgeBase) {
+      // Embed topic + text so a topical query still matches.
+      _index.add(_Indexed(e, embedder.embed('${e.topic} ${e.text}')));
     }
-  }
-
-  void _seed(Box<KbChunk> box) {
-    box.putMany([
-      for (final e in knowledgeBase)
-        KbChunk(
-          lang: e.lang,
-          topic: e.topic,
-          text: e.text,
-          // Embed topic + text so a topical query still matches.
-          embedding: embedder.embed('${e.topic} ${e.text}'),
-        ),
-    ]);
+    _ready = true;
   }
 
   /// Up to [k] relevant passages for [text], preferring [lang] when enough
-  /// in-language passages are found. Empty when the store isn't ready.
-  List<KbChunk> retrieve(String text, {String? lang, int k = 3}) {
-    final box = _box;
-    if (box == null) return const [];
+  /// in-language passages match. Empty when not initialised or nothing matches.
+  List<KbEntry> retrieve(String text, {String? lang, int k = 3}) {
+    if (!_ready) return const [];
     final queryVec = embedder.embed(text);
-    final query =
-        box.query(KbChunk_.embedding.nearestNeighborsF32(queryVec, k * 4)).build();
-    try {
-      var chunks = query.findWithScores().map((s) => s.object).toList();
-      if (lang != null) {
-        final inLang = chunks.where((c) => c.lang == lang).toList();
-        if (inLang.isNotEmpty) chunks = inLang;
-      }
-      return chunks.take(k).toList();
-    } finally {
-      query.close();
+    var scored = [
+      for (final item in _index)
+        (entry: item.entry, score: cosineSimilarity(queryVec, item.vector)),
+    ];
+    if (lang != null) {
+      final inLang = scored.where((s) => s.entry.lang == lang).toList();
+      if (inLang.isNotEmpty) scored = inLang;
     }
+    scored.sort((a, b) => b.score.compareTo(a.score));
+    return [
+      for (final s in scored.take(k))
+        if (s.score > 0) s.entry,
+    ];
   }
 
-  void dispose() {
-    _store?.close();
-    _store = null;
-    _box = null;
-  }
+  void dispose() {}
+}
+
+class _Indexed {
+  _Indexed(this.entry, this.vector);
+  final KbEntry entry;
+  final List<double> vector;
 }

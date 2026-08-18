@@ -22,10 +22,15 @@ question ─▶ Embedder ─▶ ObjectBox HNSW (vector search) ─▶ top-k pass
   the assistant can say.**
 - **Embedder** — `lib/rag/embedder.dart`. Ships `LexicalEmbedder` (pure Dart,
   feature-hashing, no model). Real *semantic* retrieval is a drop-in — see below.
-- **Vector store** — `lib/rag/kb_chunk.dart` (`@Entity` with an
-  `@HnswIndex(dimensions: 256)` float-vector) + `rag_service.dart` (ObjectBox).
-  Seeded from the KB on first run; separate from the Drift patient DB; degrades
-  gracefully (`isReady == false`) if it can't open.
+- **Vector store** — `lib/rag/rag_service.dart`. The KB is a small fixed list,
+  so the store is just the embeddings held in memory: embed every passage once
+  at `init()`, then brute-force cosine top-k per query (sub-millisecond at this
+  scale). No database, no native plugin, no codegen.
+  > Originally built on ObjectBox HNSW, but its code generator pulled in an
+  > `analyzer` version incompatible with Drift's `source_gen`, breaking
+  > `build_runner`. The in-memory index is equivalent at a few-hundred-passage
+  > corpus; a real vector DB (ObjectBox HNSW / `sqlite-vec`) is the upgrade for a
+  > large corpus — swap only `RagService`'s storage, the rest is unchanged.
 - **Grounding** — `GemmaAssistant.ask` prepends retrieved passages with a
   "use ONLY this approved information" instruction. The `TemplateAssistant`
   returns the retrieved passage directly, so retrieval helps even without the
@@ -33,10 +38,10 @@ question ─▶ Embedder ─▶ ObjectBox HNSW (vector search) ─▶ top-k pass
 
 ## Build / run
 
-`objectbox` + `objectbox_flutter_libs` are dependencies; `objectbox_generator`
-generates `lib/objectbox.g.dart` (+ `objectbox-model.json`) during
-`dart run build_runner build`. It's a native plugin — validate the Gradle build
-on a device. No extra Android setup beyond the defaults.
+Nothing extra — the in-memory store adds no dependency, no native plugin, and no
+codegen. RAG works as soon as the app runs (with the lexical embedder); the
+answer quality upgrades when you drop in the Gemma model and/or the MiniLM
+embedder.
 
 ## Upgrade to semantic embeddings (MiniLM)
 

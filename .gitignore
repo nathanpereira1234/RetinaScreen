@@ -17,10 +17,6 @@ coverage/
 *.g.dart
 *.freezed.dart
 
-# ObjectBox model schema (regenerated with objectbox.g.dart; the KB store is
-# re-seedable, so stable UIDs aren't needed here).
-objectbox-model.json
-
 # --- Platform scaffolding (regenerated via `flutter create`, see README) ---
 /android/
 /ios/
