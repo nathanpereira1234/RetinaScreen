@@ -84,7 +84,8 @@ dependencies:
   # TemplateAssistant, so this never blocks first run. See docs/LLM_ASSISTANT.md.
   # Native ML plugin — validate the Gradle build on a real device.
   flutter_gemma: ^1.5.9
-  flutter_gemma_litertlm: ^1.5.9
+  # Versioned independently of flutter_gemma (its LiteRT engine companion).
+  flutter_gemma_litertlm: ^1.4.2
 
 dev_dependencies:
   flutter_test:
