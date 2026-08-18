@@ -7,6 +7,7 @@ import 'package:printing/printing.dart';
 
 import '../data/database.dart';
 import '../models/enums.dart';
+import '../models/program_metrics.dart';
 import 'referral_pass.dart';
 
 /// Builds and shares a per-screening report as a PDF.
@@ -64,6 +65,102 @@ class ReportService {
         history: history,
       ),
     );
+  }
+
+  /// Share a program-summary PDF (the metrics dashboard as a document funders
+  /// and partners can be handed). Built on-device.
+  Future<void> shareProgramSummary({
+    required ProgramMetrics metrics,
+    required List<SiteStat> sites,
+    required String rangeLabel,
+  }) async {
+    final bytes = await buildProgramSummary(
+      program: program,
+      metrics: metrics,
+      sites: sites,
+      rangeLabel: rangeLabel,
+    );
+    await Printing.sharePdf(bytes: bytes, filename: 'program-summary.pdf');
+  }
+
+  /// Render the program-summary PDF. Pure.
+  static Future<Uint8List> buildProgramSummary({
+    required ReportProgram program,
+    required ProgramMetrics metrics,
+    required List<SiteStat> sites,
+    required String rangeLabel,
+  }) async {
+    final doc = pw.Document();
+    String pct(double v) => '${(v * 100).round()}%';
+    doc.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(32),
+        footer: (context) => _footer(context, program),
+        build: (context) => [
+          _header(program),
+          pw.SizedBox(height: 16),
+          pw.Text('Program summary',
+              style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold)),
+          pw.Text('Period: $rangeLabel',
+              style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey600)),
+          pw.SizedBox(height: 16),
+          _resultBanner(
+            'Attendance rate: ${pct(metrics.attendanceRate)}  '
+            '(${metrics.reachedClinicCount} of ${metrics.referredCount} referred '
+            'reached the clinic — booking alone does not count)',
+            PdfColors.teal700,
+          ),
+          pw.SizedBox(height: 16),
+          _sectionTitle('Totals'),
+          _kvTable({
+            'Patients': '${metrics.totalPatients}',
+            'Screenings': '${metrics.totalScreenings}',
+            'Referable': '${metrics.referableCount}',
+            'Ungradable': '${metrics.ungradableCount}',
+            'Pending follow-up': '${metrics.pendingCount}',
+            'Reached clinic': '${metrics.reachedClinicCount}',
+            'Treated': '${metrics.treatedCount}',
+            'Referral rate': pct(metrics.referralRate),
+            'Ungradable rate': pct(metrics.ungradableRate),
+          }),
+          if (sites.isNotEmpty) ...[
+            pw.SizedBox(height: 16),
+            _sectionTitle('By referral site'),
+            pw.Table(
+              border: pw.TableBorder.all(color: PdfColors.grey300),
+              children: [
+                _siteRow('Site', 'Screened', 'Referred', 'Reached', header: true),
+                for (final st in sites)
+                  _siteRow('${st.site}', '${st.screened}', '${st.referred}',
+                      '${st.reached} (${pct(st.attendanceRate)})'),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+    return doc.save();
+  }
+
+  static pw.TableRow _siteRow(
+    String a,
+    String b,
+    String c,
+    String d, {
+    bool header = false,
+  }) {
+    pw.Widget cell(String t) => pw.Padding(
+          padding: const pw.EdgeInsets.all(4),
+          child: pw.Text(
+            t,
+            style: pw.TextStyle(
+              fontSize: 10,
+              fontWeight: header ? pw.FontWeight.bold : pw.FontWeight.normal,
+            ),
+          ),
+        );
+    return pw.TableRow(children: [cell(a), cell(b), cell(c), cell(d)]);
   }
 
   /// Render the report to PDF bytes. Pure — no I/O, no platform channel.

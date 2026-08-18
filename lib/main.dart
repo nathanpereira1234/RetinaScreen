@@ -74,12 +74,27 @@ class _RetinaScreenAppState extends ConsumerState<RetinaScreenApp>
             );
   }
 
+  DateTime? _pausedAt;
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // Re-lock when the app leaves the foreground, if the lock is enabled.
-    if (state == AppLifecycleState.paused &&
-        ref.read(prefsServiceProvider).lockEnabled) {
-      ref.read(lockControllerProvider.notifier).lock();
+    final prefs = ref.read(prefsServiceProvider);
+    if (!prefs.lockEnabled) return;
+    if (state == AppLifecycleState.paused) {
+      _pausedAt = DateTime.now();
+      // No grace period → lock immediately so the app-switcher preview is
+      // hidden. With a grace period, we lock on resume instead.
+      if (prefs.autoLockMinutes == 0) {
+        ref.read(lockControllerProvider.notifier).lock();
+      }
+    } else if (state == AppLifecycleState.resumed) {
+      final since = _pausedAt;
+      final elapsed =
+          since == null ? Duration.zero : DateTime.now().difference(since);
+      if (elapsed >= Duration(minutes: prefs.autoLockMinutes)) {
+        ref.read(lockControllerProvider.notifier).lock();
+      }
+      _pausedAt = null;
     }
   }
 
@@ -104,6 +119,7 @@ class _RetinaScreenAppState extends ConsumerState<RetinaScreenApp>
     final locked = ref.watch(lockControllerProvider);
     final onboarded = ref.watch(onboardingSeenProvider);
     final themeMode = ref.watch(themeModeProvider);
+    final textScale = ref.watch(textScaleProvider);
 
     final Widget home = !onboarded
         ? const OnboardingScreen()
@@ -125,6 +141,18 @@ class _RetinaScreenAppState extends ConsumerState<RetinaScreenApp>
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
+      builder: (context, child) {
+        // Apply the user's accessibility text scale on top of the OS setting.
+        final media = MediaQuery.of(context);
+        return MediaQuery(
+          data: media.copyWith(
+            textScaler: TextScaler.linear(
+              media.textScaler.scale(1) * textScale,
+            ),
+          ),
+          child: child!,
+        );
+      },
       home: home,
     );
   }

@@ -141,6 +141,25 @@ class AppStrings {
   String get spokenNotReferable => _get('spokenNotReferable');
   String get spokenUngradable => _get('spokenUngradable');
 
+  // Batch 2: workflow / insights / accessibility
+  String get delete => _get('delete');
+  String get deletePatientTitle => _get('deletePatientTitle');
+  String deletePatientBody(String name) =>
+      _fill('deletePatientBody', {'name': name});
+  String get overdue => _get('overdue');
+  String get noReminder => _get('noReminder');
+  String get reschedule => _get('reschedule');
+  String get rangeAll => _get('rangeAll');
+  String get range90 => _get('range90');
+  String get range30 => _get('range30');
+  String get bySite => _get('bySite');
+  String get programReport => _get('programReport');
+  String get textSize => _get('textSize');
+  String get autoLock => _get('autoLock');
+  String get immediately => _get('immediately');
+  String get activityLog => _get('activityLog');
+  String get noActivityYet => _get('noActivityYet');
+
   // Onboarding
   String get getStarted => _get('getStarted');
   String get skip => _get('skip');
@@ -278,6 +297,24 @@ const Map<String, String> _en = {
   'onbBody3':
       'Everything runs on the device — reminders, reports, QR hand-off and '
           'metrics — with no internet needed.',
+  'delete': 'Delete',
+  'deletePatientTitle': 'Delete patient?',
+  'deletePatientBody':
+      'This permanently removes {name} and all their screenings. This cannot '
+          'be undone.',
+  'overdue': 'Overdue',
+  'noReminder': 'No reminder set',
+  'reschedule': 'Reschedule',
+  'rangeAll': 'All time',
+  'range90': '90 days',
+  'range30': '30 days',
+  'bySite': 'By referral site',
+  'programReport': 'Program PDF',
+  'textSize': 'Text size',
+  'autoLock': 'Auto-lock',
+  'immediately': 'Immediately',
+  'activityLog': 'Activity log',
+  'noActivityYet': 'No activity yet.',
 };
 
 const Map<String, String> _hi = {
@@ -385,6 +422,24 @@ const Map<String, String> _hi = {
   'onbBody3':
       'सब कुछ डिवाइस पर चलता है — रिमाइंडर, रिपोर्ट, QR और आँकड़े — बिना '
           'इंटरनेट के।',
+  'delete': 'हटाएँ',
+  'deletePatientTitle': 'मरीज़ हटाएँ?',
+  'deletePatientBody':
+      'यह {name} और उनकी सभी जाँचें स्थायी रूप से हटा देगा। इसे पूर्ववत नहीं '
+          'किया जा सकता।',
+  'overdue': 'बकाया',
+  'noReminder': 'कोई रिमाइंडर नहीं',
+  'reschedule': 'फिर से तय करें',
+  'rangeAll': 'पूरा समय',
+  'range90': '90 दिन',
+  'range30': '30 दिन',
+  'bySite': 'रेफ़रल साइट अनुसार',
+  'programReport': 'कार्यक्रम PDF',
+  'textSize': 'टेक्स्ट आकार',
+  'autoLock': 'ऑटो-लॉक',
+  'immediately': 'तुरंत',
+  'activityLog': 'गतिविधि लॉग',
+  'noActivityYet': 'अभी कोई गतिविधि नहीं।',
 };
 
 const Map<String, String> _ta = {
@@ -495,6 +550,24 @@ const Map<String, String> _ta = {
   'onbBody3':
       'அனைத்தும் சாதனத்தில் இயங்கும் — நினைவூட்டல்கள், அறிக்கைகள், QR மற்றும் '
           'அளவீடுகள் — இணையம் தேவையில்லை.',
+  'delete': 'நீக்கு',
+  'deletePatientTitle': 'நோயாளியை நீக்கவா?',
+  'deletePatientBody':
+      'இது {name} மற்றும் அவரது அனைத்து பரிசோதனைகளையும் நிரந்தரமாக நீக்கும். '
+          'இதைத் திரும்பப் பெற முடியாது.',
+  'overdue': 'தாமதம்',
+  'noReminder': 'நினைவூட்டல் இல்லை',
+  'reschedule': 'மறுஅட்டவணை',
+  'rangeAll': 'எல்லா நேரமும்',
+  'range90': '90 நாட்கள்',
+  'range30': '30 நாட்கள்',
+  'bySite': 'பரிந்துரை தளம் வாரியாக',
+  'programReport': 'திட்ட PDF',
+  'textSize': 'எழுத்து அளவு',
+  'autoLock': 'தானியங்கு பூட்டு',
+  'immediately': 'உடனடியாக',
+  'activityLog': 'செயல்பாட்டு பதிவு',
+  'noActivityYet': 'இதுவரை செயல்பாடு இல்லை.',
 };
 
 const Map<AppLanguage, Map<String, String>> _tables = {

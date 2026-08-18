@@ -73,6 +73,15 @@ class PatientScreening {
   final Screening screening;
 }
 
+/// A referral event joined with its patient, for the activity-log timeline.
+/// Read-only view model; not a table.
+class ActivityEntry {
+  ActivityEntry({required this.event, required this.patient});
+
+  final ReferralEvent event;
+  final Patient patient;
+}
+
 // ---------------------------------------------------------------------------
 // Database (A06, A10) + queries / DAO (A09) + referral transaction (A17)
 // ---------------------------------------------------------------------------
@@ -158,6 +167,23 @@ class AppDatabase extends _$AppDatabase {
         .watch();
   }
 
+  /// Reschedule (or clear) a screening's follow-up reminder. Additive: only
+  /// touches `nextReminderAt`.
+  Future<void> updateReminder(int screeningId, DateTime? when) {
+    return (update(screenings)..where((s) => s.id.equals(screeningId)))
+        .write(ScreeningsCompanion(nextReminderAt: Value(when)));
+  }
+
+  /// Distinct, non-empty referral sites entered so far — for autocomplete.
+  Future<List<String>> distinctReferralSites() async {
+    final rows = await (selectOnly(screenings, distinct: true)
+          ..addColumns([screenings.referralSite])
+          ..where(screenings.referralSite.isNotNull()))
+        .map((r) => r.read(screenings.referralSite))
+        .get();
+    return rows.whereType<String>().where((s) => s.isNotEmpty).toList()..sort();
+  }
+
   Future<int> insertScreening(ScreeningsCompanion screening) {
     return transaction(() async {
       final id = await into(screenings).insert(screening);
@@ -227,6 +253,28 @@ class AppDatabase extends _$AppDatabase {
           (row) => PatientScreening(
             patient: row.readTable(patients),
             screening: row.readTable(screenings),
+          ),
+        )
+        .watch();
+  }
+
+  /// The program's recent referral activity (every status change), newest
+  /// first, each joined with the patient. Feeds the activity-log screen.
+  Stream<List<ActivityEntry>> watchRecentActivity({int limit = 50}) {
+    final query = select(referralEvents).join([
+      innerJoin(
+        screenings,
+        screenings.id.equalsExp(referralEvents.screeningId),
+      ),
+      innerJoin(patients, patients.id.equalsExp(screenings.patientId)),
+    ])
+      ..orderBy([OrderingTerm.desc(referralEvents.occurredAt)])
+      ..limit(limit);
+    return query
+        .map(
+          (row) => ActivityEntry(
+            event: row.readTable(referralEvents),
+            patient: row.readTable(patients),
           ),
         )
         .watch();

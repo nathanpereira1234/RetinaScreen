@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
@@ -44,6 +45,11 @@ class PatientDetailScreen extends ConsumerWidget {
                     builder: (_) => PatientFormScreen(existing: patient),
                   ),
                 ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete_outline),
+                tooltip: s.delete,
+                onPressed: () => _confirmDelete(context, ref, patient),
               ),
             ],
           ),
@@ -93,6 +99,38 @@ class PatientDetailScreen extends ConsumerWidget {
         );
       },
     );
+  }
+
+  Future<void> _confirmDelete(
+    BuildContext context,
+    WidgetRef ref,
+    Patient patient,
+  ) async {
+    final s = ref.read(stringsProvider);
+    final navigator = Navigator.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(s.deletePatientTitle),
+        content: Text(s.deletePatientBody(patient.name)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.referable),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(s.delete),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await ref.read(patientRepositoryProvider).deletePatient(patient.id);
+      await HapticFeedback.mediumImpact();
+      navigator.pop();
+    }
   }
 }
 
@@ -243,6 +281,27 @@ class _ScreeningCard extends ConsumerWidget {
                 ],
               ),
             ],
+            if (screening.referralStatus == ReferralStatus.referred ||
+                screening.referralStatus == ReferralStatus.booked) ...[
+              const SizedBox(height: AppSpacing.xs),
+              Row(
+                children: [
+                  const Icon(Icons.notifications_outlined, size: 18),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Text(
+                      screening.nextReminderAt == null
+                          ? s.noReminder
+                          : _formatDate(screening.nextReminderAt!),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => _reschedule(context, ref),
+                    child: Text(s.reschedule),
+                  ),
+                ],
+              ),
+            ],
             if (next.isNotEmpty) ...[
               const Divider(),
               Wrap(
@@ -313,6 +372,31 @@ class _ScreeningCard extends ConsumerWidget {
     }
   }
 
+  /// Pick a new follow-up date, persist it, and (re)schedule the reminder.
+  Future<void> _reschedule(BuildContext context, WidgetRef ref) async {
+    final now = DateTime.now();
+    final current = screening.nextReminderAt;
+    final date = await showDatePicker(
+      context: context,
+      firstDate: now,
+      lastDate: now.add(const Duration(days: 365)),
+      initialDate: (current != null && current.isAfter(now))
+          ? current
+          : now.add(const Duration(days: 30)),
+    );
+    if (date == null) return;
+    final when = DateTime(date.year, date.month, date.day, 9);
+    await ref.read(patientRepositoryProvider).updateReminder(screening.id, when);
+    await ref.read(notificationServiceProvider).schedule(
+          id: screening.id,
+          title: 'Follow-up due',
+          body: '${patient.name} has a pending eye-clinic referral.',
+          when: when,
+          patientId: patient.id,
+        );
+    await HapticFeedback.selectionClick();
+  }
+
   Future<void> _advance(
     BuildContext context,
     WidgetRef ref,
@@ -323,6 +407,7 @@ class _ScreeningCard extends ConsumerWidget {
       await ref
           .read(patientRepositoryProvider)
           .advanceReferral(screeningId: screening.id, to: to);
+      await HapticFeedback.selectionClick();
       // Once the patient has reached the clinic, stop the reminder.
       if (to.hasReachedClinic) {
         await ref.read(notificationServiceProvider).cancel(screening.id);

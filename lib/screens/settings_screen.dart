@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/app_providers.dart';
 import '../theme/app_theme.dart';
+import 'activity_log_screen.dart';
 
 /// Settings: language, app lock (PIN/biometric), and an about note that keeps
 /// the "does not diagnose" line visible.
@@ -56,6 +57,28 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               onTap: () => ref.read(themeModeProvider.notifier).set(mode),
             ),
           const Divider(),
+          _SectionHeader(s.textSize),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+            child: Row(
+              children: [
+                const Text('A', style: TextStyle(fontSize: 14)),
+                Expanded(
+                  child: Slider(
+                    min: 0.8,
+                    max: 1.6,
+                    divisions: 8,
+                    value: ref.watch(textScaleProvider),
+                    label: '${(ref.watch(textScaleProvider) * 100).round()}%',
+                    onChanged: (v) =>
+                        ref.read(textScaleProvider.notifier).set(v),
+                  ),
+                ),
+                const Text('A', style: TextStyle(fontSize: 24)),
+              ],
+            ),
+          ),
+          const Divider(),
           _SectionHeader(s.security),
           SwitchListTile(
             title: Text(s.appLock),
@@ -63,24 +86,78 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             value: prefs.lockEnabled,
             onChanged: (on) => _toggleLock(on),
           ),
-          if (prefs.lockEnabled)
+          if (prefs.lockEnabled) ...[
             ListTile(
               leading: const Icon(Icons.pin_outlined),
               title: Text(s.changePin),
               onTap: _setPin,
             ),
+            ListTile(
+              leading: const Icon(Icons.timer_outlined),
+              title: Text(s.autoLock),
+              trailing: Text(_autoLockLabel(s, prefs.autoLockMinutes)),
+              onTap: () => _pickAutoLock(prefs),
+            ),
+          ],
           const Divider(),
           _SectionHeader(s.about),
+          ListTile(
+            leading: const Icon(Icons.history),
+            title: Text(s.activityLog),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const ActivityLogScreen(),
+              ),
+            ),
+          ),
+          AboutListTile(
+            icon: const Icon(Icons.info_outline),
+            applicationName: 'RetinaScreen',
+            applicationVersion: 'v$_appVersion',
+            applicationLegalese: '© RetinaScreen',
+            aboutBoxChildren: [
+              const SizedBox(height: AppSpacing.md),
+              Text(s.doesNotDiagnose),
+            ],
+          ),
           Padding(
             padding: const EdgeInsets.all(AppSpacing.md),
             child: Text(
               s.doesNotDiagnose,
-              style: Theme.of(context).textTheme.bodyMedium,
+              style: Theme.of(context).textTheme.bodySmall,
             ),
           ),
         ],
       ),
     );
+  }
+
+  static const _appVersion = '0.1.0';
+
+  String _autoLockLabel(AppStrings s, int minutes) =>
+      minutes == 0 ? s.immediately : '$minutes min';
+
+  Future<void> _pickAutoLock(PrefsService prefs) async {
+    final s = ref.read(stringsProvider);
+    final choice = await showModalBottomSheet<int>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final m in const [0, 1, 5, 15])
+              ListTile(
+                title: Text(_autoLockLabel(s, m)),
+                onTap: () => Navigator.of(ctx).pop(m),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (choice != null) {
+      await prefs.setAutoLockMinutes(choice);
+      if (mounted) setState(() {});
+    }
   }
 
   Future<void> _toggleLock(bool on) async {
