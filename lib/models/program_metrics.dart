@@ -128,4 +128,48 @@ class ProgramMetrics {
   /// Of everyone who reached the clinic, the share who received treatment.
   double get treatmentRate =>
       reachedClinicCount == 0 ? 0 : treatedCount / reachedClinicCount;
+
+  /// Per-referral-site breakdown, busiest first. A site with no name is grouped
+  /// under [unassignedSite]. Pure.
+  static const unassignedSite = 'Unassigned';
+
+  static List<SiteStat> siteStats(List<Screening> screenings) {
+    final byS = <String, List<int>>{}; // site -> [screened, referred, reached]
+    for (final sc in screenings) {
+      final site = (sc.referralSite == null || sc.referralSite!.isEmpty)
+          ? unassignedSite
+          : sc.referralSite!;
+      final agg = byS.putIfAbsent(site, () => [0, 0, 0]);
+      agg[0]++;
+      if (sc.referralStatus != ReferralStatus.none) agg[1]++;
+      if (sc.referralStatus.hasReachedClinic) agg[2]++;
+    }
+    final list = [
+      for (final e in byS.entries)
+        SiteStat(
+          site: e.key,
+          screened: e.value[0],
+          referred: e.value[1],
+          reached: e.value[2],
+        ),
+    ]..sort((a, b) => b.screened.compareTo(a.screened));
+    return list;
+  }
+}
+
+/// One referral site's counts (for the per-site breakdown).
+class SiteStat {
+  const SiteStat({
+    required this.site,
+    required this.screened,
+    required this.referred,
+    required this.reached,
+  });
+
+  final String site;
+  final int screened;
+  final int referred;
+  final int reached;
+
+  double get attendanceRate => referred == 0 ? 0 : reached / referred;
 }

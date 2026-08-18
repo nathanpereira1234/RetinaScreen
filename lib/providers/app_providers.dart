@@ -29,7 +29,7 @@ import '../services/tts_service.dart';
 // Re-export the row types and domain enums so screens get them from this one
 // import and never reach into `data/`.
 export '../data/database.dart'
-    show Patient, Screening, ReferralEvent, PatientScreening;
+    show Patient, Screening, ReferralEvent, PatientScreening, ActivityEntry;
 export '../l10n/strings.dart' show AppLanguage, AppStrings;
 export '../l10n/labels.dart'
     show resultLabel, referralStatusLabel, spokenResult;
@@ -38,7 +38,7 @@ export '../services/fundus_quality.dart'
 export '../services/referral_pass.dart' show buildReferralPayload;
 export '../services/tts_service.dart' show TtsService;
 export '../models/enums.dart';
-export '../models/program_metrics.dart' show ProgramMetrics;
+export '../models/program_metrics.dart' show ProgramMetrics, SiteStat;
 export '../services/crash_reporter.dart' show CrashReporter;
 export '../services/prefs_service.dart' show PrefsService;
 export '../services/security_service.dart' show SecurityService;
@@ -119,6 +119,23 @@ class ThemeModeController extends StateNotifier<ThemeMode> {
   }
 }
 
+/// UI text scale (accessibility), persisted via [PrefsService].
+final textScaleProvider =
+    StateNotifierProvider<TextScaleController, double>((ref) {
+  return TextScaleController(ref.watch(prefsServiceProvider));
+});
+
+class TextScaleController extends StateNotifier<double> {
+  TextScaleController(this._prefs) : super(_prefs.textScale);
+
+  final PrefsService _prefs;
+
+  Future<void> set(double scale) async {
+    state = scale;
+    await _prefs.setTextScale(scale);
+  }
+}
+
 /// Whether the first-run onboarding has been completed.
 final onboardingSeenProvider =
     StateNotifierProvider<OnboardingController, bool>((ref) {
@@ -189,6 +206,16 @@ final recentScreeningsProvider =
 final referralHistoryProvider =
     StreamProvider.family<List<ReferralEvent>, int>((ref, screeningId) {
   return ref.watch(databaseProvider).watchReferralHistory(screeningId);
+});
+
+/// Program-wide recent referral activity, newest first (activity-log screen).
+final recentActivityProvider = StreamProvider<List<ActivityEntry>>((ref) {
+  return ref.watch(databaseProvider).watchRecentActivity();
+});
+
+/// Distinct referral sites entered so far, for autocomplete.
+final referralSitesProvider = FutureProvider<List<String>>((ref) {
+  return ref.watch(databaseProvider).distinctReferralSites();
 });
 
 /// Every screening across all patients — the raw input to [programMetrics].
@@ -300,6 +327,10 @@ class PatientRepository {
       ),
     );
   }
+
+  /// Reschedule (or clear) a screening's follow-up reminder.
+  Future<void> updateReminder(int screeningId, DateTime? when) =>
+      _db.updateReminder(screeningId, when);
 
   /// Advance a referral one legal step, logging the change.
   ///

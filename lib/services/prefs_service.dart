@@ -15,6 +15,8 @@ class PrefsService {
   static const _kLockEnabled = 'app_lock_enabled';
   static const _kThemeMode = 'theme_mode';
   static const _kOnboardingSeen = 'onboarding_seen';
+  static const _kTextScale = 'text_scale';
+  static const _kAutoLockMinutes = 'auto_lock_minutes';
 
   AppLanguage get language =>
       AppLanguage.fromCode(_prefs.getString(_kLanguage));
@@ -40,4 +42,17 @@ class PrefsService {
 
   Future<void> setOnboardingSeen(bool seen) =>
       _prefs.setBool(_kOnboardingSeen, seen);
+
+  /// UI text scale, clamped to a sensible field range. 1.0 = default.
+  double get textScale => (_prefs.getDouble(_kTextScale) ?? 1.0).clamp(0.8, 1.6);
+
+  Future<void> setTextScale(double scale) =>
+      _prefs.setDouble(_kTextScale, scale);
+
+  /// Minutes the app may sit in the background before the lock re-engages.
+  /// 0 = lock immediately when backgrounded.
+  int get autoLockMinutes => _prefs.getInt(_kAutoLockMinutes) ?? 0;
+
+  Future<void> setAutoLockMinutes(int minutes) =>
+      _prefs.setInt(_kAutoLockMinutes, minutes);
 }

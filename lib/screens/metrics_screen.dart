@@ -12,70 +12,122 @@ import '../theme/app_theme.dart';
 /// actually reached the clinic. `booked` does NOT count as reaching the clinic
 /// (that is the exact failure this product measures), so this screen never
 /// shows a rate that treats a booking as a win.
-class MetricsScreen extends ConsumerWidget {
+class MetricsScreen extends ConsumerStatefulWidget {
   const MetricsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MetricsScreen> createState() => _MetricsScreenState();
+}
+
+enum _Range { all, d90, d30 }
+
+class _MetricsScreenState extends ConsumerState<MetricsScreen> {
+  _Range _range = _Range.all;
+
+  bool _inRange(Screening s) => switch (_range) {
+        _Range.all => true,
+        _Range.d90 => s.screeningDate
+            .isAfter(DateTime.now().subtract(const Duration(days: 90))),
+        _Range.d30 => s.screeningDate
+            .isAfter(DateTime.now().subtract(const Duration(days: 30))),
+      };
+
+  String _rangeLabel(AppStrings s) => switch (_range) {
+        _Range.all => s.rangeAll,
+        _Range.d90 => s.range90,
+        _Range.d30 => s.range30,
+      };
+
+  ProgramMetrics _metricsFor(List<Screening> filtered, List<Patient> patients) {
+    final total = _range == _Range.all
+        ? patients.length
+        : filtered.map((e) => e.patientId).toSet().length;
+    return ProgramMetrics.from(totalPatients: total, screenings: filtered);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final s = ref.watch(stringsProvider);
-    final metricsAsync = ref.watch(programMetricsProvider);
     final screeningsAsync = ref.watch(allScreeningsProvider);
+    final patients =
+        ref.watch(patientListProvider).valueOrNull ?? const <Patient>[];
 
     return Scaffold(
       appBar: AppBar(
         title: Text(s.programMetrics),
         actions: [
           IconButton(
+            icon: const Icon(Icons.picture_as_pdf_outlined),
+            tooltip: s.programReport,
+            onPressed: () => _exportPdf(patients),
+          ),
+          IconButton(
             icon: const Icon(Icons.ios_share),
             tooltip: s.exportCsv,
-            onPressed: () => _export(context, ref),
+            onPressed: () => _exportCsv(context),
           ),
         ],
       ),
-      body: metricsAsync.when(
+      body: screeningsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Could not load metrics:\n$e')),
-        data: (m) => ListView(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          children: [
-            _Headline(metrics: m),
-            const SizedBox(height: AppSpacing.md),
-            _StatGrid(metrics: m),
-            const SizedBox(height: AppSpacing.lg),
-            _CardSection(
-              title: s.screeningFunnel,
-              child: _FunnelChart(metrics: m, strings: s),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            _CardSection(
-              title: s.attendanceOverTime,
-              child: _TrendChart(
-                months: _monthlySeries(screeningsAsync.valueOrNull ?? const []),
+        data: (all) {
+          final filtered = all.where(_inRange).toList();
+          final m = _metricsFor(filtered, patients);
+          final sites = ProgramMetrics.siteStats(filtered);
+          return ListView(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            children: [
+              _RangeSelector(
+                range: _range,
+                strings: s,
+                onChanged: (r) => setState(() => _range = r),
               ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            _RateRow(
-              label: s.referralRate,
-              rate: m.referralRate,
-              color: AppColors.pending,
-            ),
-            _RateRow(
-              label: s.ungradableRate,
-              rate: m.ungradableRate,
-              color: AppColors.ungradable,
-            ),
-            _RateRow(
-              label: s.treatmentRate,
-              rate: m.treatmentRate,
-              color: AppColors.reached,
-            ),
-          ],
-        ),
+              const SizedBox(height: AppSpacing.md),
+              _Headline(metrics: m),
+              const SizedBox(height: AppSpacing.md),
+              _StatGrid(metrics: m),
+              const SizedBox(height: AppSpacing.lg),
+              _CardSection(
+                title: s.screeningFunnel,
+                child: _FunnelChart(metrics: m, strings: s),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              _CardSection(
+                title: s.attendanceOverTime,
+                child: _TrendChart(months: _monthlySeries(filtered)),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              _RateRow(
+                label: s.referralRate,
+                rate: m.referralRate,
+                color: AppColors.pending,
+              ),
+              _RateRow(
+                label: s.ungradableRate,
+                rate: m.ungradableRate,
+                color: AppColors.ungradable,
+              ),
+              _RateRow(
+                label: s.treatmentRate,
+                rate: m.treatmentRate,
+                color: AppColors.reached,
+              ),
+              if (sites.isNotEmpty) ...[
+                const SizedBox(height: AppSpacing.md),
+                _CardSection(
+                  title: s.bySite,
+                  child: _SiteBreakdown(sites: sites, strings: s),
+                ),
+              ],
+            ],
+          );
+        },
       ),
     );
   }
 
-  Future<void> _export(BuildContext context, WidgetRef ref) async {
+  Future<void> _exportCsv(BuildContext context) async {
     final s = ref.read(stringsProvider);
     final messenger = ScaffoldMessenger.of(context);
     final rows =
@@ -86,27 +138,100 @@ class MetricsScreen extends ConsumerWidget {
     }
   }
 
-  /// The last 6 calendar months of screening counts (and reached-clinic counts),
-  /// oldest first. Pure — folds the screening list into monthly buckets.
-  static List<MonthBucket> _monthlySeries(List<Screening> screenings) {
-    final now = DateTime.now();
-    final buckets = <String, MonthBucket>{};
-    final order = <String>[];
-    for (var i = 5; i >= 0; i--) {
-      final d = DateTime(now.year, now.month - i);
-      final key = '${d.year}-${d.month}';
-      order.add(key);
-      buckets[key] = MonthBucket(label: DateFormat('MMM').format(d));
-    }
-    for (final sc in screenings) {
-      final key = '${sc.screeningDate.year}-${sc.screeningDate.month}';
-      final bucket = buckets[key];
-      if (bucket == null) continue; // outside the 6-month window
-      bucket.screened++;
-      if (sc.referralStatus.hasReachedClinic) bucket.reached++;
-    }
-    return [for (final k in order) buckets[k]!];
+  Future<void> _exportPdf(List<Patient> patients) async {
+    final s = ref.read(stringsProvider);
+    final all =
+        ref.read(allScreeningsProvider).valueOrNull ?? const <Screening>[];
+    final filtered = all.where(_inRange).toList();
+    await ref.read(reportServiceProvider).shareProgramSummary(
+          metrics: _metricsFor(filtered, patients),
+          sites: ProgramMetrics.siteStats(filtered),
+          rangeLabel: _rangeLabel(s),
+        );
   }
+}
+
+class _RangeSelector extends StatelessWidget {
+  const _RangeSelector({
+    required this.range,
+    required this.strings,
+    required this.onChanged,
+  });
+
+  final _Range range;
+  final AppStrings strings;
+  final ValueChanged<_Range> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return SegmentedButton<_Range>(
+      segments: [
+        ButtonSegment(value: _Range.all, label: Text(strings.rangeAll)),
+        ButtonSegment(value: _Range.d90, label: Text(strings.range90)),
+        ButtonSegment(value: _Range.d30, label: Text(strings.range30)),
+      ],
+      selected: {range},
+      onSelectionChanged: (set) => onChanged(set.first),
+    );
+  }
+}
+
+class _SiteBreakdown extends StatelessWidget {
+  const _SiteBreakdown({required this.sites, required this.strings});
+
+  final List<SiteStat> sites;
+  final AppStrings strings;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        for (final st in sites)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    st.site,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w500),
+                  ),
+                ),
+                Text(
+                  '${st.reached}/${st.referred} · '
+                  '${(st.attendanceRate * 100).round()}%',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// The last 6 calendar months of screening counts (and reached-clinic counts),
+/// oldest first. Pure — folds the screening list into monthly buckets.
+List<MonthBucket> _monthlySeries(List<Screening> screenings) {
+  final now = DateTime.now();
+  final buckets = <String, MonthBucket>{};
+  final order = <String>[];
+  for (var i = 5; i >= 0; i--) {
+    final d = DateTime(now.year, now.month - i);
+    final key = '${d.year}-${d.month}';
+    order.add(key);
+    buckets[key] = MonthBucket(label: DateFormat('MMM').format(d));
+  }
+  for (final sc in screenings) {
+    final key = '${sc.screeningDate.year}-${sc.screeningDate.month}';
+    final bucket = buckets[key];
+    if (bucket == null) continue; // outside the 6-month window
+    bucket.screened++;
+    if (sc.referralStatus.hasReachedClinic) bucket.reached++;
+  }
+  return [for (final k in order) buckets[k]!];
 }
 
 /// One month's counts for the trend chart.

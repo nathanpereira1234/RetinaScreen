@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -154,6 +155,7 @@ class _ScreeningFormScreenState extends ConsumerState<ScreeningFormScreen> {
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+    await HapticFeedback.mediumImpact();
     if (mounted) Navigator.of(context).pop();
   }
 
@@ -207,6 +209,11 @@ class _ScreeningFormScreenState extends ConsumerState<ScreeningFormScreen> {
               decoration: const InputDecoration(
                 labelText: 'Referral site / clinic (optional)',
               ),
+            ),
+            _SiteSuggestions(
+              sites: ref.watch(referralSitesProvider).valueOrNull ??
+                  const <String>[],
+              onPick: (site) => setState(() => _site.text = site),
             ),
             const SizedBox(height: AppSpacing.md),
             TextFormField(
@@ -404,6 +411,30 @@ class _QualityBanner extends ConsumerWidget {
         FundusIssue.blurry => s.issueBlurry,
         FundusIssue.lowField => s.issueLowField,
       };
+}
+
+/// Quick-fill chips for referral sites entered on earlier screenings.
+class _SiteSuggestions extends StatelessWidget {
+  const _SiteSuggestions({required this.sites, required this.onPick});
+
+  final List<String> sites;
+  final ValueChanged<String> onPick;
+
+  @override
+  Widget build(BuildContext context) {
+    if (sites.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.sm),
+      child: Wrap(
+        spacing: AppSpacing.sm,
+        runSpacing: 0,
+        children: [
+          for (final site in sites.take(6))
+            ActionChip(label: Text(site), onPressed: () => onPick(site)),
+        ],
+      ),
+    );
+  }
 }
 
 String _formatDate(DateTime d) =>

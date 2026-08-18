@@ -111,7 +111,11 @@ class HomeScreen extends ConsumerWidget {
   String _followUpSubtitle(AppStrings s, PatientScreening e) {
     final status = referralStatusLabel(s, e.screening.referralStatus);
     final due = e.screening.nextReminderAt;
-    return due == null ? status : '$status · ${_formatDate(due)}';
+    if (due == null) return status;
+    final overdue = due.isBefore(DateTime.now());
+    return overdue
+        ? '$status · ⚠ ${s.overdue} ${_formatDate(due)}'
+        : '$status · ${_formatDate(due)}';
   }
 
   String _recentSubtitle(AppStrings s, PatientScreening e) =>
