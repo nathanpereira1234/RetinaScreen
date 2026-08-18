@@ -53,6 +53,8 @@ export '../services/attendance_ai.dart' show AttendanceAi, OutreachBand;
 export '../services/anomaly_detector.dart'
     show AnomalyDetector, SiteAnomaly, AnomalyKind;
 export '../services/fundus_ai.dart' show FundusAi;
+export '../services/assistant.dart'
+    show AssistantService, AssistantEngine, TemplateAssistant;
 
 /// Set up in `main` before the first frame, so synchronous reads work.
 final prefsServiceProvider = Provider<PrefsService>((ref) {
@@ -163,6 +165,12 @@ final ttsServiceProvider = Provider<TtsService>((ref) {
   ref.onDispose(tts.dispose);
   return tts;
 });
+
+/// The patient assistant. Defaults to the offline [TemplateAssistant]; swap in
+/// the on-device Gemma engine per docs/LLM_ASSISTANT.md (that's the only line
+/// that changes — the whole UI is written against [AssistantService]).
+final assistantServiceProvider =
+    Provider<AssistantService>((ref) => const TemplateAssistant());
 
 // ---------------------------------------------------------------------------
 // Reads — all streams.

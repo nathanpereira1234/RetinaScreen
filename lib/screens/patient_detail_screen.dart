@@ -5,6 +5,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 
 import '../providers/app_providers.dart';
 import '../theme/app_theme.dart';
+import 'assistant_screen.dart';
 import 'patient_form_screen.dart';
 import 'screening_form_screen.dart';
 
@@ -258,6 +259,18 @@ class _ScreeningCard extends ConsumerWidget {
                   icon: const Icon(Icons.volume_up_outlined),
                   tooltip: s.listen,
                   onPressed: () => _listen(ref),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.support_agent_outlined),
+                  tooltip: s.assistant,
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => AssistantScreen(
+                        result: screening.result,
+                        patientName: patient.name,
+                      ),
+                    ),
+                  ),
                 ),
                 _ReportMenu(
                   strings: s,

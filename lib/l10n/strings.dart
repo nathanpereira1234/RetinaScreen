@@ -162,6 +162,11 @@ class AppStrings {
   String get flaggedSites => _get('flaggedSites');
   String get highUngradableRate => _get('highUngradableRate');
   String get lowAttendanceRate => _get('lowAttendanceRate');
+  String get assistant => _get('assistant');
+  String get explainToPatient => _get('explainToPatient');
+  String get askPlaceholder => _get('askPlaceholder');
+  String get templateModeNote => _get('templateModeNote');
+  String get send => _get('send');
 
   // Onboarding
   String get getStarted => _get('getStarted');
@@ -321,6 +326,13 @@ const Map<String, String> _en = {
   'flaggedSites': 'Flagged sites (AI)',
   'highUngradableRate': 'high ungradable',
   'lowAttendanceRate': 'low attendance',
+  'assistant': 'Assistant',
+  'explainToPatient': 'Explain to patient',
+  'askPlaceholder': 'Ask a question…',
+  'templateModeNote':
+      'On-device AI is off, so I can only give the standard explanation. Enable '
+          'the on-device model for open questions and translation.',
+  'send': 'Send',
 };
 
 const Map<String, String> _hi = {
@@ -449,6 +461,13 @@ const Map<String, String> _hi = {
   'flaggedSites': 'चिह्नित साइटें (AI)',
   'highUngradableRate': 'अधिक अयोग्य',
   'lowAttendanceRate': 'कम उपस्थिति',
+  'assistant': 'सहायक',
+  'explainToPatient': 'मरीज़ को समझाएँ',
+  'askPlaceholder': 'कोई सवाल पूछें…',
+  'templateModeNote':
+      'ऑन-डिवाइस AI बंद है, इसलिए मैं केवल मानक व्याख्या दे सकता हूँ। खुले '
+          'सवालों और अनुवाद के लिए ऑन-डिवाइस मॉडल चालू करें।',
+  'send': 'भेजें',
 };
 
 const Map<String, String> _ta = {
@@ -580,6 +599,14 @@ const Map<String, String> _ta = {
   'flaggedSites': 'குறிக்கப்பட்ட தளங்கள் (AI)',
   'highUngradableRate': 'அதிக மதிப்பிடமுடியாதவை',
   'lowAttendanceRate': 'குறைந்த வருகை',
+  'assistant': 'உதவியாளர்',
+  'explainToPatient': 'நோயாளிக்கு விளக்கு',
+  'askPlaceholder': 'ஒரு கேள்வி கேளுங்கள்…',
+  'templateModeNote':
+      'சாதனத்தில் AI அணைக்கப்பட்டுள்ளது, எனவே நான் நிலையான விளக்கத்தை மட்டுமே '
+          'தர முடியும். திறந்த கேள்விகள் மற்றும் மொழிபெயர்ப்புக்கு சாதன மாதிரியை '
+          'இயக்கவும்.',
+  'send': 'அனுப்பு',
 };
 
 const Map<AppLanguage, Map<String, String>> _tables = {
