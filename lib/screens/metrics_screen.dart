@@ -75,6 +75,7 @@ class _MetricsScreenState extends ConsumerState<MetricsScreen> {
           final filtered = all.where(_inRange).toList();
           final m = _metricsFor(filtered, patients);
           final sites = ProgramMetrics.siteStats(filtered);
+          final anomalies = AnomalyDetector.detect(filtered);
           return ListView(
             padding: const EdgeInsets.all(AppSpacing.md),
             children: [
@@ -88,6 +89,13 @@ class _MetricsScreenState extends ConsumerState<MetricsScreen> {
               const SizedBox(height: AppSpacing.md),
               _StatGrid(metrics: m),
               const SizedBox(height: AppSpacing.lg),
+              if (anomalies.isNotEmpty) ...[
+                _CardSection(
+                  title: s.flaggedSites,
+                  child: _AnomalyList(anomalies: anomalies, strings: s),
+                ),
+                const SizedBox(height: AppSpacing.md),
+              ],
               _CardSection(
                 title: s.screeningFunnel,
                 child: _FunnelChart(metrics: m, strings: s),
@@ -203,6 +211,43 @@ class _SiteBreakdown extends StatelessWidget {
                   '${st.reached}/${st.referred} · '
                   '${(st.attendanceRate * 100).round()}%',
                   style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// Lists AI-flagged outlier sites (high ungradable rate / low attendance).
+class _AnomalyList extends StatelessWidget {
+  const _AnomalyList({required this.anomalies, required this.strings});
+
+  final List<SiteAnomaly> anomalies;
+  final AppStrings strings;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (final a in anomalies)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+            child: Row(
+              children: [
+                const Icon(Icons.warning_amber_rounded,
+                    color: AppColors.ungradable, size: 18),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    '${a.site} · '
+                    '${a.kind == AnomalyKind.highUngradable ? strings.highUngradableRate : strings.lowAttendanceRate} '
+                    '${(a.value * 100).round()}% '
+                    '(avg ${(a.cohortMean * 100).round()}%)',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
                 ),
               ],
             ),

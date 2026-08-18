@@ -190,6 +190,34 @@ pulling this branch.
 New packages: `qr_flutter`, `flutter_tts` (+ dev `flutter_launcher_icons`,
 `flutter_native_splash`). The quality gate reuses the existing `image` dep.
 
+## On-device AI (all suggestion-only, non-diagnostic)
+
+Ten AI/ML features, all pure-Dart (no new dependencies) and fully offline. None
+of them outputs a clinical judgement — that line is what keeps Phase 1 outside
+SaMD, so every one is decision-support or operational only.
+
+**Operational ML** (`services/attendance_ai.dart`, `anomaly_detector.dart`):
+- No-show / attendance-likelihood scoring and an outreach-priority rank, so the
+  home follow-up list is triaged (a coloured dot shows who to chase first).
+- Program anomaly detection — flags sites whose ungradable rate or attendance
+  is a statistical outlier, on the metrics screen.
+- Smart reminder-date suggestion (referable chased sooner than routine).
+
+**Fundus-grader AI** (`services/fundus_ai.dart`, `retinopathy_grader.dart`) —
+plumbing works now; the grade suggestion needs a bundled `dr_model.tflite`:
+- Test-time augmentation (grade + horizontal flip, averaged) for a steadier
+  suggestion.
+- Confidence / uncertainty gating — a low-confidence result asks for manual
+  grading instead of nudging toward a possibly-wrong answer.
+- Ben-Graham preprocessing + an "Enhanced view" (crop-to-fundus, local
+  contrast).
+- Perceptual-hash duplicate detection — warns if a photo is reused.
+- Quality-gated suggestion — a poor-quality capture suppresses the AI nudge.
+
+The weights in the operational models are documented heuristic priors, meant to
+be refit on a pilot's own data. Tested in `test/attendance_ai_test.dart`,
+`anomaly_detector_test.dart`, `fundus_ai_test.dart`.
+
 ## Things that are load-bearing
 
 **`ReferralEvents` is append-only.** It is the evidence for the Phase 1

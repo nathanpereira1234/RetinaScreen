@@ -22,6 +22,8 @@ import '../services/notification_service.dart';
 import '../services/prefs_service.dart';
 import '../services/reminder_service.dart';
 import '../services/report_service.dart';
+import '../services/assistant.dart';
+import '../services/gemma_assistant.dart';
 import '../services/retinopathy_grader.dart';
 import '../services/security_service.dart';
 import '../services/tts_service.dart';
@@ -49,6 +51,12 @@ export '../services/reminder_service.dart' show ReminderService;
 export '../services/report_service.dart' show ReportService, ReportProgram;
 export '../services/retinopathy_grader.dart'
     show RetinopathyGrader, RetinopathyPrediction, DrGrade;
+export '../services/attendance_ai.dart' show AttendanceAi, OutreachBand;
+export '../services/anomaly_detector.dart'
+    show AnomalyDetector, SiteAnomaly, AnomalyKind;
+export '../services/fundus_ai.dart' show FundusAi;
+export '../services/assistant.dart'
+    show AssistantService, AssistantEngine, TemplateAssistant;
 
 /// Set up in `main` before the first frame, so synchronous reads work.
 final prefsServiceProvider = Provider<PrefsService>((ref) {
@@ -158,6 +166,15 @@ final ttsServiceProvider = Provider<TtsService>((ref) {
   final tts = TtsService();
   ref.onDispose(tts.dispose);
   return tts;
+});
+
+/// The patient assistant. Uses the on-device Gemma engine once its model has
+/// been downloaded (Settings → On-device AI); until then the offline
+/// [TemplateAssistant]. The whole UI is written against [AssistantService], so
+/// this gate is the only switch.
+final assistantServiceProvider = Provider<AssistantService>((ref) {
+  final ready = ref.watch(prefsServiceProvider).gemmaInstalled;
+  return ready ? const GemmaAssistant() : const TemplateAssistant();
 });
 
 // ---------------------------------------------------------------------------

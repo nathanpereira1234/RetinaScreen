@@ -101,7 +101,8 @@ class ReportService {
           _header(program),
           pw.SizedBox(height: 16),
           pw.Text('Program summary',
-              style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold)),
+              style: const pw.TextStyle(
+                  fontSize: 20, fontWeight: pw.FontWeight.bold)),
           pw.Text('Period: $rangeLabel',
               style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey600)),
           pw.SizedBox(height: 16),
@@ -132,7 +133,7 @@ class ReportService {
               children: [
                 _siteRow('Site', 'Screened', 'Referred', 'Reached', header: true),
                 for (final st in sites)
-                  _siteRow('${st.site}', '${st.screened}', '${st.referred}',
+                  _siteRow(st.site, '${st.screened}', '${st.referred}',
                       '${st.reached} (${pct(st.attendanceRate)})'),
               ],
             ),
