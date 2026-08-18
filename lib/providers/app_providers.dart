@@ -22,6 +22,8 @@ import '../services/notification_service.dart';
 import '../services/prefs_service.dart';
 import '../services/reminder_service.dart';
 import '../services/report_service.dart';
+import '../services/assistant.dart';
+import '../services/gemma_assistant.dart';
 import '../services/retinopathy_grader.dart';
 import '../services/security_service.dart';
 import '../services/tts_service.dart';
@@ -166,11 +168,14 @@ final ttsServiceProvider = Provider<TtsService>((ref) {
   return tts;
 });
 
-/// The patient assistant. Defaults to the offline [TemplateAssistant]; swap in
-/// the on-device Gemma engine per docs/LLM_ASSISTANT.md (that's the only line
-/// that changes — the whole UI is written against [AssistantService]).
-final assistantServiceProvider =
-    Provider<AssistantService>((ref) => const TemplateAssistant());
+/// The patient assistant. Uses the on-device Gemma engine once its model has
+/// been downloaded (Settings → On-device AI); until then the offline
+/// [TemplateAssistant]. The whole UI is written against [AssistantService], so
+/// this gate is the only switch.
+final assistantServiceProvider = Provider<AssistantService>((ref) {
+  final ready = ref.watch(prefsServiceProvider).gemmaInstalled;
+  return ready ? const GemmaAssistant() : const TemplateAssistant();
+});
 
 // ---------------------------------------------------------------------------
 // Reads — all streams.

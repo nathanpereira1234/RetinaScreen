@@ -17,6 +17,7 @@ class PrefsService {
   static const _kOnboardingSeen = 'onboarding_seen';
   static const _kTextScale = 'text_scale';
   static const _kAutoLockMinutes = 'auto_lock_minutes';
+  static const _kGemmaInstalled = 'gemma_installed';
 
   AppLanguage get language =>
       AppLanguage.fromCode(_prefs.getString(_kLanguage));
@@ -55,4 +56,11 @@ class PrefsService {
 
   Future<void> setAutoLockMinutes(int minutes) =>
       _prefs.setInt(_kAutoLockMinutes, minutes);
+
+  /// Whether the on-device Gemma model has been downloaded. Gates the LLM
+  /// assistant engine; until true, the offline template engine is used.
+  bool get gemmaInstalled => _prefs.getBool(_kGemmaInstalled) ?? false;
+
+  Future<void> setGemmaInstalled(bool installed) =>
+      _prefs.setBool(_kGemmaInstalled, installed);
 }

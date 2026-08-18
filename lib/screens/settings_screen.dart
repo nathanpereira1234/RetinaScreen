@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/app_providers.dart';
+import '../services/gemma_assistant.dart';
 import '../theme/app_theme.dart';
 import 'activity_log_screen.dart';
 
@@ -100,6 +101,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
           ],
           const Divider(),
+          _SectionHeader('On-device AI (Assistant)'),
+          ListTile(
+            leading: Icon(
+              prefs.gemmaInstalled
+                  ? Icons.check_circle_outline
+                  : Icons.smart_toy_outlined,
+              color: prefs.gemmaInstalled ? AppColors.reached : null,
+            ),
+            title: Text(prefs.gemmaInstalled
+                ? 'On-device AI model installed'
+                : 'Download AI model (~550 MB)'),
+            subtitle: const Text(
+              'Adds open Q&A and translation to the Assistant. Runs entirely '
+              'on-device; download once over Wi-Fi. Needs a capable phone.',
+            ),
+            trailing: prefs.gemmaInstalled ? null : const Icon(Icons.download),
+            onTap: prefs.gemmaInstalled ? null : _downloadModel,
+          ),
+          const Divider(),
           _SectionHeader(s.about),
           ListTile(
             leading: const Icon(Icons.history),
@@ -157,6 +177,46 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (choice != null) {
       await prefs.setAutoLockMinutes(choice);
       if (mounted) setState(() {});
+    }
+  }
+
+  Future<void> _downloadModel() async {
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final progress = ValueNotifier<double>(0);
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AlertDialog(
+        title: const Text('Downloading AI model'),
+        content: ValueListenableBuilder<double>(
+          valueListenable: progress,
+          builder: (_, v, __) => Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              LinearProgressIndicator(value: v <= 0 ? null : v / 100),
+              const SizedBox(height: AppSpacing.sm),
+              Text('${v.round()}%'),
+            ],
+          ),
+        ),
+      ),
+    );
+    try {
+      await GemmaAssistant.install((p) => progress.value = p);
+      await ref.read(prefsServiceProvider).setGemmaInstalled(true);
+      navigator.pop();
+      if (mounted) setState(() {});
+      messenger.showSnackBar(
+        const SnackBar(content: Text('On-device AI model installed.')),
+      );
+    } catch (e) {
+      navigator.pop();
+      messenger.showSnackBar(
+        SnackBar(content: Text('Download failed: $e')),
+      );
+    } finally {
+      progress.dispose();
     }
   }
 
