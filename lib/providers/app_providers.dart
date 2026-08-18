@@ -22,6 +22,7 @@ import '../services/notification_service.dart';
 import '../services/prefs_service.dart';
 import '../services/reminder_service.dart';
 import '../services/report_service.dart';
+import '../rag/rag_service.dart';
 import '../services/assistant.dart';
 import '../services/gemma_assistant.dart';
 import '../services/retinopathy_grader.dart';
@@ -175,6 +176,20 @@ final ttsServiceProvider = Provider<TtsService>((ref) {
 final assistantServiceProvider = Provider<AssistantService>((ref) {
   final ready = ref.watch(prefsServiceProvider).gemmaInstalled;
   return ready ? const GemmaAssistant() : const TemplateAssistant();
+});
+
+/// On-device RAG store (ObjectBox vector DB over the curated knowledge base).
+final ragServiceProvider = Provider<RagService>((ref) {
+  final service = RagService();
+  ref.onDispose(service.dispose);
+  return service;
+});
+
+/// Opens + seeds the RAG store once; `true` when retrieval is available.
+final ragReadyProvider = FutureProvider<bool>((ref) async {
+  final service = ref.watch(ragServiceProvider);
+  await service.init();
+  return service.isReady;
 });
 
 // ---------------------------------------------------------------------------

@@ -87,6 +87,13 @@ dependencies:
   # Versioned independently of flutter_gemma (its LiteRT engine companion).
   flutter_gemma_litertlm: ^1.4.2
 
+  # On-device vector database for RAG grounding of the assistant (HNSW nearest-
+  # neighbour search over a curated, non-diagnostic knowledge base). Native
+  # plugin + codegen; the KB store is separate from the Drift patient DB and
+  # degrades gracefully if it can't open. See docs/RAG.md.
+  objectbox: ^4.0.3
+  objectbox_flutter_libs: ^4.0.3
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -94,6 +101,9 @@ dev_dependencies:
   # Codegen for Drift tables -> lib/data/database.g.dart
   drift_dev: ^2.20.0
   build_runner: ^2.4.11
+
+  # Codegen for the ObjectBox vector KB (objectbox.g.dart + objectbox-model.json).
+  objectbox_generator: ^4.0.3
 
   flutter_lints: ^4.0.0
 
